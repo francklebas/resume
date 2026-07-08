@@ -13,10 +13,13 @@ export default defineNuxtConfig({
     redirectOptions: {
       login: '/login',
       callback: '/confirm',
+      exclude: ['/print/**'],
     },
   },
   runtimeConfig: {
     // NUXT_MISTRAL_API_KEY
     mistralApiKey: '',
+    // NUXT_PRINT_TOKEN_SECRET
+    printTokenSecret: '',
   },
 })

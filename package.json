@@ -12,6 +12,7 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@cloudflare/puppeteer": "^1.1.0",
     "@mistralai/mistralai": "^2.4.1",
     "@nuxtjs/supabase": "^2.0.9",
     "@opentelemetry/api": "^1.9.1",
@@ -22,6 +23,7 @@
     "vue-router": "^5.1.0"
   },
   "devDependencies": {
+    "puppeteer": "^25.3.0",
     "typescript": "^6.0.3",
     "vue-tsc": "^3.3.6",
     "wrangler": "^4.107.0"

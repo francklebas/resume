@@ -12,6 +12,10 @@
     "enabled": true
   },
   "routes": [{ "pattern": "resume.francklebas.com", "custom_domain": true }],
+  // Browser Rendering pour la génération des PDF (@cloudflare/puppeteer) ; quota gratuit 10 min/jour.
+  "browser": {
+    "binding": "BROWSER"
+  },
   "vars": {
     "SUPABASE_URL": "https://ogtrvjzqfgbooidskbav.supabase.co",
     "SUPABASE_KEY": "sb_publishable_1l5v1RuhQsXPVKBiq5zP9g_spFSFgmT"

@@ -86,21 +86,27 @@ onMounted(() => {
   })
   if (previewWrap.value) observer.observe(previewWrap.value)
   onUnmounted(() => observer.disconnect())
-
-  // À l'impression, la préview doit s'afficher à taille réelle (pas la mise à l'échelle d'écran)
-  let scaleBeforePrint = 1
-  const onBeforePrint = () => { scaleBeforePrint = scale.value; scale.value = 1 }
-  const onAfterPrint = () => { scale.value = scaleBeforePrint }
-  window.addEventListener('beforeprint', onBeforePrint)
-  window.addEventListener('afterprint', onAfterPrint)
-  onUnmounted(() => {
-    window.removeEventListener('beforeprint', onBeforePrint)
-    window.removeEventListener('afterprint', onAfterPrint)
-  })
 })
 
-function downloadPdf() {
-  window.print()
+const downloading = ref(false)
+
+async function downloadPdf() {
+  downloading.value = true
+  try {
+    const blob = await $fetch<Blob>(`/api/cvs/${slug}/download`, { responseType: 'blob' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `franck-lebas-${slug}.pdf`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+  catch (e: unknown) {
+    saveError.value = errorMessage(e)
+  }
+  finally {
+    downloading.value = false
+  }
 }
 
 function matchBadgeClass(score: number): string {
@@ -149,10 +155,11 @@ const saveLabel = computed(() => ({
           Enregistrer
         </button>
         <button
-          class="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+          class="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          :disabled="downloading"
           @click="downloadPdf"
         >
-          Télécharger (PDF)
+          {{ downloading ? 'Génération…' : 'Télécharger (PDF)' }}
         </button>
         <button
           type="button"
