@@ -11,6 +11,7 @@
   "observability": {
     "enabled": true
   },
+  "routes": [{ "pattern": "resume.francklebas.com", "custom_domain": true }],
   "vars": {
     "SUPABASE_URL": "https://ogtrvjzqfgbooidskbav.supabase.co",
     "SUPABASE_KEY": "sb_publishable_1l5v1RuhQsXPVKBiq5zP9g_spFSFgmT"

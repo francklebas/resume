@@ -8,11 +8,10 @@ const fields = [
   { key: 'title', label: 'Titre (ligne bleue)' },
   { key: 'tagline', label: 'Sous-titre' },
   { key: 'location', label: 'Localisation' },
-  { key: 'availability', label: 'Disponibilité' },
   { key: 'phone', label: 'Téléphone' },
   { key: 'email', label: 'Email' },
   { key: 'linkedin', label: 'LinkedIn' },
-] as const satisfies readonly { key: keyof CvHeader, label: string }[]
+] as const satisfies readonly { key: keyof Omit<CvHeader, 'availableImmediately'>, label: string }[]
 </script>
 
 <template>
@@ -24,6 +23,14 @@ const fields = [
         type="text"
         class="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
       >
+    </label>
+    <label class="flex items-center gap-2 sm:col-span-2">
+      <input
+        v-model="props.header.availableImmediately"
+        type="checkbox"
+        class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+      >
+      <span class="text-sm text-slate-700">Disponible immédiatement</span>
     </label>
   </div>
 </template>

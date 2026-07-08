@@ -1,6 +1,6 @@
 <script setup lang="ts">
-defineProps<{ title: string }>()
-const open = ref(true)
+const props = withDefaults(defineProps<{ title: string, defaultOpen?: boolean }>(), { defaultOpen: true })
+const open = ref(props.defaultOpen)
 </script>
 
 <template>

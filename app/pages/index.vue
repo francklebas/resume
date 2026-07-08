@@ -51,6 +51,12 @@ function removeCv(cv: CvRow) {
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
 }
+
+function matchBadgeClass(score: number): string {
+  if (score >= 80) return 'bg-emerald-50 text-emerald-700'
+  if (score >= 50) return 'bg-amber-50 text-amber-700'
+  return 'bg-red-50 text-red-700'
+}
 </script>
 
 <template>
@@ -58,6 +64,8 @@ function formatDate(iso: string): string {
     <div class="mb-6 flex items-center justify-between">
       <h1 class="text-2xl font-semibold tracking-tight">Mes CV</h1>
     </div>
+
+    <JobAdIntake v-if="cvs.some(c => c.is_base)" @created="() => refresh()" />
 
     <p v-if="errorMsg" class="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">
       {{ errorMsg }}
@@ -89,6 +97,12 @@ function formatDate(iso: string): string {
               v-if="cv.is_base"
               class="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700"
             >Base</span>
+            <span
+              v-if="cv.match_score !== null"
+              class="rounded-full px-2 py-0.5 text-xs font-medium"
+              :class="matchBadgeClass(cv.match_score)"
+              :title="cv.match_summary ?? undefined"
+            >{{ cv.match_score }}% match</span>
           </div>
           <p class="mt-0.5 text-xs text-slate-500">
             <code class="rounded bg-slate-100 px-1">{{ cv.slug }}</code>

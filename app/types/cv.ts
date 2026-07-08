@@ -3,7 +3,7 @@ export interface CvHeader {
   title: string
   tagline: string
   location: string
-  availability: string
+  availableImmediately: boolean
   phone: string
   email: string
   linkedin: string
@@ -51,6 +51,14 @@ export interface CvContent {
   languages: CvLanguage[]
 }
 
+export interface CvSnapshot {
+  id: string
+  cv_id: string
+  name: string
+  content: CvContent
+  created_at: string
+}
+
 export interface CvRow {
   id: string
   user_id: string
@@ -58,6 +66,8 @@ export interface CvRow {
   name: string
   is_base: boolean
   content: CvContent
+  match_score: number | null
+  match_summary: string | null
   pdf_key: string | null
   pdf_generated_at: string | null
   created_at: string

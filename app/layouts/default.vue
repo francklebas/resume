@@ -9,8 +9,8 @@ async function logout() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-100 text-slate-900">
-    <header class="border-b border-slate-200 bg-white">
+  <div class="min-h-screen bg-slate-100 text-slate-900 print:bg-white">
+    <header class="border-b border-slate-200 bg-white print:hidden">
       <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
         <NuxtLink to="/" class="text-lg font-semibold tracking-tight">
           CV<span class="text-blue-600">Builder</span>
@@ -24,7 +24,7 @@ async function logout() {
         </button>
       </div>
     </header>
-    <main class="mx-auto max-w-6xl px-6 py-8">
+    <main class="mx-auto max-w-6xl px-6 py-8 print:max-w-none print:p-0">
       <slot />
     </main>
   </div>

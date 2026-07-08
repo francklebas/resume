@@ -8,9 +8,9 @@ export const baseCvContent: CvContent = {
   header: {
     name: 'Franck LEBAS',
     title: 'Senior Vue.js Engineer · Vue 3 · Nuxt · TypeScript',
-    tagline: '17 years of experience | SSR & SaaS Platforms | Design Background',
+    tagline: 'Senior Vue.js Engineer',
     location: 'Stockholm, Sweden',
-    availability: 'Available immediately',
+    availableImmediately: true,
     phone: '+46 (0)735 103 291',
     email: 'francklebas@ik.me',
     linkedin: 'linkedin.com/in/francklebas',

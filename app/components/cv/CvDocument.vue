@@ -7,15 +7,19 @@ defineProps<{ content: CvContent }>()
 <template>
   <div class="cv">
     <!-- Header -->
-    <header>
-      <h1 class="cv-name">{{ content.header.name }}</h1>
-      <p class="cv-title">{{ content.header.title }}</p>
-      <p class="cv-meta">{{ content.header.tagline }}</p>
-      <p class="cv-meta">
-        <span>📍 {{ content.header.location }}</span>
-        <span v-if="content.header.availability"> · {{ content.header.availability }}</span>
-        <span class="cv-meta-sep">{{ content.header.phone }} · {{ content.header.email }} · {{ content.header.linkedin }}</span>
-      </p>
+    <header class="cv-header">
+      <div class="cv-header-main">
+        <h1 class="cv-name">{{ content.header.name }}</h1>
+        <p class="cv-title">{{ content.header.title }}</p>
+        <p class="cv-meta">{{ content.header.tagline }}</p>
+      </div>
+      <div class="cv-header-contact">
+        <p v-if="content.header.availableImmediately" class="cv-meta cv-available">Available immediately</p>
+        <p class="cv-meta">📍 {{ content.header.location }}</p>
+        <p class="cv-meta">{{ content.header.phone }}</p>
+        <p class="cv-meta">{{ content.header.email }}</p>
+        <p class="cv-meta">{{ content.header.linkedin }}</p>
+      </div>
     </header>
 
     <!-- Profile -->
@@ -27,14 +31,12 @@ defineProps<{ content: CvContent }>()
     <!-- Skills -->
     <section v-if="content.skills.length" class="cv-section">
       <h2 class="cv-section-title">Core Technical Skills</h2>
-      <table class="cv-table">
-        <tbody>
-          <tr v-for="group in content.skills" :key="group.category">
-            <th class="cv-table-label">{{ group.category }}</th>
-            <td class="cv-table-value">{{ group.items.join(' · ') }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="cv-skills-grid">
+        <div v-for="group in content.skills" :key="group.category" class="cv-skill-group">
+          <span class="cv-skill-label">{{ group.category }}</span>
+          <span class="cv-skill-items">{{ group.items.join(' · ') }}</span>
+        </div>
+      </div>
     </section>
 
     <!-- Experience -->
@@ -106,6 +108,18 @@ defineProps<{ content: CvContent }>()
 }
 
 /* Header */
+.cv-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 6mm;
+}
+
+.cv-header-contact {
+  flex-shrink: 0;
+  text-align: right;
+}
+
 .cv-name {
   font-size: 23pt;
   font-weight: 700;
@@ -125,8 +139,10 @@ defineProps<{ content: CvContent }>()
   margin: 0 0 0.8mm;
 }
 
-.cv-meta-sep {
-  margin-left: 4mm;
+.cv-available {
+  color: var(--accent);
+  font-weight: 700;
+  margin-bottom: 1.5mm;
 }
 
 /* Sections */
@@ -151,7 +167,33 @@ defineProps<{ content: CvContent }>()
   text-align: justify;
 }
 
-/* Tables (skills & metrics) */
+/* Skills grid */
+.cv-skills-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2mm 6mm;
+}
+
+.cv-skill-group {
+  display: flex;
+  gap: 2mm;
+  font-size: 9.5pt;
+}
+
+.cv-skill-label {
+  flex: 0 0 34%;
+  background: #f2f2f2;
+  color: var(--muted);
+  font-weight: 700;
+  padding: 1.6mm 3mm;
+}
+
+.cv-skill-items {
+  flex: 1;
+  padding: 1.6mm 3mm;
+}
+
+/* Tables (metrics) */
 .cv-table {
   width: 100%;
   border-collapse: collapse;
@@ -163,13 +205,6 @@ defineProps<{ content: CvContent }>()
   text-align: left;
   vertical-align: top;
   font-size: 9.5pt;
-}
-
-.cv-table-label {
-  width: 30%;
-  background: #f2f2f2;
-  color: var(--muted);
-  font-weight: 700;
 }
 
 .cv-table-metrics tr {

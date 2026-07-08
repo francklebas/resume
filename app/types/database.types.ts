@@ -14,12 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      cv_snapshots: {
+        Row: {
+          content: Json
+          created_at: string
+          cv_id: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          content: Json
+          created_at?: string
+          cv_id: string
+          id?: string
+          name: string
+          user_id?: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          cv_id?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       cvs: {
         Row: {
           content: Json
           created_at: string
           id: string
           is_base: boolean
+          match_score: number | null
+          match_summary: string | null
           name: string
           pdf_generated_at: string | null
           pdf_key: string | null
@@ -32,6 +61,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_base?: boolean
+          match_score?: number | null
+          match_summary?: string | null
           name: string
           pdf_generated_at?: string | null
           pdf_key?: string | null
@@ -44,6 +75,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_base?: boolean
+          match_score?: number | null
+          match_summary?: string | null
           name?: string
           pdf_generated_at?: string | null
           pdf_key?: string | null

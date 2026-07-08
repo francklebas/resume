@@ -15,4 +15,8 @@ export default defineNuxtConfig({
       callback: '/confirm',
     },
   },
+  runtimeConfig: {
+    // NUXT_MISTRAL_API_KEY
+    mistralApiKey: '',
+  },
 })

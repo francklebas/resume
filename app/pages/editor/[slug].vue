@@ -1,15 +1,22 @@
 <script setup lang="ts">
-import type { CvContent } from '~/types/cv'
+import type { CvContent, CvSnapshot } from '~/types/cv'
 
 const route = useRoute()
 const slug = route.params.slug as string
 const { getBySlug, updateContent } = useCvs()
+const { list: listSnapshots, create: createSnapshot } = useCvSnapshots()
 
 const { data: cv } = await useAsyncData(`cv-${slug}`, () => getBySlug(slug))
 
 if (!cv.value) {
   throw createError({ statusCode: 404, statusMessage: 'CV introuvable' })
 }
+
+const { data: snapshots, refresh: refreshSnapshots } = await useAsyncData(
+  `cv-${slug}-snapshots`,
+  () => listSnapshots(cv.value!.id),
+  { default: () => [] as CvSnapshot[] },
+)
 
 // Copie locale éditable ; la préview et l'autosave observent la même structure.
 const draft = reactive({
@@ -36,12 +43,32 @@ async function save() {
     cv.value = updated
     saveState.value = 'saved'
     saveError.value = null
+    await refreshSnapshots()
   }
   catch (e: unknown) {
     saveState.value = 'error'
     saveError.value = errorMessage(e)
   }
 }
+
+async function restore(snapshot: CvSnapshot) {
+  if (!window.confirm(`Restaurer la version du ${formatDateTime(snapshot.created_at)} ? La version actuelle sera aussi conservée dans l'historique.`)) return
+  draft.name = snapshot.name
+  draft.content = structuredClone(snapshot.content)
+  await save()
+  historyOpen.value = false
+}
+
+async function snapshotNow() {
+  await createSnapshot(cv.value!.id, draft.name, structuredClone(toRaw(draft.content)))
+  await refreshSnapshots()
+}
+
+function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
+const historyOpen = ref(false)
 
 watch(draft, () => {
   saveState.value = 'dirty'
@@ -59,7 +86,28 @@ onMounted(() => {
   })
   if (previewWrap.value) observer.observe(previewWrap.value)
   onUnmounted(() => observer.disconnect())
+
+  // À l'impression, la préview doit s'afficher à taille réelle (pas la mise à l'échelle d'écran)
+  let scaleBeforePrint = 1
+  const onBeforePrint = () => { scaleBeforePrint = scale.value; scale.value = 1 }
+  const onAfterPrint = () => { scale.value = scaleBeforePrint }
+  window.addEventListener('beforeprint', onBeforePrint)
+  window.addEventListener('afterprint', onAfterPrint)
+  onUnmounted(() => {
+    window.removeEventListener('beforeprint', onBeforePrint)
+    window.removeEventListener('afterprint', onAfterPrint)
+  })
 })
+
+function downloadPdf() {
+  window.print()
+}
+
+function matchBadgeClass(score: number): string {
+  if (score >= 80) return 'bg-emerald-50 text-emerald-700'
+  if (score >= 50) return 'bg-amber-50 text-amber-700'
+  return 'bg-red-50 text-red-700'
+}
 
 const saveLabel = computed(() => ({
   saved: 'Enregistré',
@@ -71,7 +119,7 @@ const saveLabel = computed(() => ({
 
 <template>
   <div>
-    <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
       <div class="flex items-center gap-3">
         <NuxtLink to="/" class="text-sm text-slate-500 hover:text-slate-900">← Mes CV</NuxtLink>
         <input
@@ -79,6 +127,12 @@ const saveLabel = computed(() => ({
           type="text"
           class="rounded-lg border border-transparent px-2 py-1 text-xl font-semibold tracking-tight hover:border-slate-300 focus:border-blue-500 focus:outline-none"
         >
+        <span
+          v-if="cv?.match_score !== null && cv?.match_score !== undefined"
+          class="rounded-full px-2 py-0.5 text-xs font-medium"
+          :class="matchBadgeClass(cv.match_score)"
+          :title="cv.match_summary ?? undefined"
+        >{{ cv.match_score }}% match</span>
         <span
           class="text-xs"
           :class="saveState === 'error' ? 'text-red-600' : 'text-slate-400'"
@@ -91,16 +145,32 @@ const saveLabel = computed(() => ({
         >
           Enregistrer
         </button>
+        <button
+          class="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+          @click="downloadPdf"
+        >
+          Télécharger (PDF)
+        </button>
+        <button
+          type="button"
+          class="rounded-lg border border-slate-300 p-1.5 text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+          title="Historique des versions"
+          @click="historyOpen = true"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z" />
+          </svg>
+        </button>
       </div>
     </div>
 
-    <p v-if="saveError" class="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">
+    <p v-if="saveError" class="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700 print:hidden">
       {{ saveError }}
     </p>
 
-    <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+    <div class="grid grid-cols-1 gap-6 xl:grid-cols-2 print:block">
       <!-- Formulaire -->
-      <div class="space-y-4">
+      <div class="space-y-4 print:hidden">
         <EditorSection title="En-tête">
           <EditorHeaderForm :header="draft.content.header" />
         </EditorSection>
@@ -126,10 +196,10 @@ const saveLabel = computed(() => ({
       </div>
 
       <!-- Préview -->
-      <div ref="previewWrap" class="min-w-0">
-        <div class="sticky top-6">
+      <div ref="previewWrap" class="min-w-0 print:w-full">
+        <div class="sticky top-6 print:static">
           <div
-            class="origin-top-left shadow-lg"
+            class="origin-top-left shadow-lg print:shadow-none"
             :style="{ transform: `scale(${scale})`, width: '210mm' }"
           >
             <CvDocument :content="draft.content" />
@@ -137,5 +207,14 @@ const saveLabel = computed(() => ({
         </div>
       </div>
     </div>
+
+    <EditorSnapshotDrawer
+      :open="historyOpen"
+      :snapshots="snapshots"
+      :busy="saveState === 'saving'"
+      @close="historyOpen = false"
+      @restore="restore"
+      @snapshot-now="snapshotNow"
+    />
   </div>
 </template>
