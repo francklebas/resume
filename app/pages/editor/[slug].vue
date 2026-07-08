@@ -109,6 +109,9 @@ function matchBadgeClass(score: number): string {
   return 'bg-red-50 text-red-700'
 }
 
+const currentStep = ref(0)
+const activeStep = computed(() => editorSteps[currentStep.value]!)
+
 const saveLabel = computed(() => ({
   saved: 'Enregistré',
   dirty: 'Modifications en attente…',
@@ -169,30 +172,59 @@ const saveLabel = computed(() => ({
     </p>
 
     <div class="grid grid-cols-1 gap-6 xl:grid-cols-2 print:block">
-      <!-- Formulaire -->
+      <!-- Formulaire, guidé pas à pas -->
       <div class="space-y-4 print:hidden">
-        <EditorSection title="En-tête">
-          <EditorHeaderForm :header="draft.content.header" />
-        </EditorSection>
-        <EditorSection title="Profil">
-          <textarea
-            v-model="draft.content.profile"
-            rows="6"
-            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-          />
-        </EditorSection>
-        <EditorSection title="Compétences">
-          <EditorSkillsForm :skills="draft.content.skills" />
-        </EditorSection>
-        <EditorSection title="Expériences">
-          <EditorExperiencesForm :experiences="draft.content.experiences" />
-        </EditorSection>
-        <EditorSection title="Métriques clés">
-          <EditorMetricsForm :metrics="draft.content.metrics" />
-        </EditorSection>
-        <EditorSection title="Formation & langues">
-          <EditorEducationForm :education="draft.content.education" :languages="draft.content.languages" />
-        </EditorSection>
+        <EditorStepper :steps="editorSteps" :current="currentStep" @update:current="currentStep = $event" />
+
+        <div class="rounded-xl border border-slate-200 bg-white p-4">
+          <div class="mb-4 flex gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-900">
+            <span aria-hidden="true">💡</span>
+            <p>{{ activeStep.tip }}</p>
+          </div>
+
+          <template v-if="activeStep.key === 'header'">
+            <EditorHeaderForm :header="draft.content.header" />
+          </template>
+          <template v-else-if="activeStep.key === 'profile'">
+            <textarea
+              v-model="draft.content.profile"
+              rows="8"
+              class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            />
+          </template>
+          <template v-else-if="activeStep.key === 'skills'">
+            <EditorSkillsForm :skills="draft.content.skills" />
+          </template>
+          <template v-else-if="activeStep.key === 'experiences'">
+            <EditorExperiencesForm :experiences="draft.content.experiences" />
+          </template>
+          <template v-else-if="activeStep.key === 'metrics'">
+            <EditorMetricsForm :metrics="draft.content.metrics" />
+          </template>
+          <template v-else-if="activeStep.key === 'education'">
+            <EditorEducationForm :education="draft.content.education" :languages="draft.content.languages" />
+          </template>
+
+          <div class="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
+            <button
+              type="button"
+              class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-40"
+              :disabled="currentStep === 0"
+              @click="currentStep--"
+            >
+              ← Précédent
+            </button>
+            <span class="text-xs text-slate-400">Étape {{ currentStep + 1 }} / {{ editorSteps.length }}</span>
+            <button
+              type="button"
+              class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-40"
+              :disabled="currentStep === editorSteps.length - 1"
+              @click="currentStep++"
+            >
+              Suivant →
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Préview -->
