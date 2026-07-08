@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "resumes",
+  "main": ".output/server/index.mjs",
+  "compatibility_date": "2026-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".output/public",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "SUPABASE_URL": "https://ogtrvjzqfgbooidskbav.supabase.co",
+    "SUPABASE_KEY": "sb_publishable_1l5v1RuhQsXPVKBiq5zP9g_spFSFgmT"
+  }
+}
