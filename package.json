@@ -14,6 +14,7 @@
   "dependencies": {
     "@mistralai/mistralai": "^2.4.1",
     "@nuxtjs/supabase": "^2.0.9",
+    "@opentelemetry/api": "^1.9.1",
     "@tailwindcss/vite": "^4.3.2",
     "nuxt": "^4.4.8",
     "tailwindcss": "^4.3.2",
