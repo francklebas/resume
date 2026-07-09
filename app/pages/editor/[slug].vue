@@ -109,6 +109,12 @@ async function downloadPdf() {
   }
 }
 
+function onImported(content: CvContent) {
+  if (!window.confirm('Remplacer le contenu actuel de ce CV par les données importées ? La version actuelle sera conservée dans l\'historique.')) return
+  draft.content = content
+  currentStep.value = 0
+}
+
 function matchBadgeClass(score: number): string {
   if (score >= 80) return 'bg-emerald-50 text-emerald-700'
   if (score >= 50) return 'bg-amber-50 text-amber-700'
@@ -181,6 +187,10 @@ const saveLabel = computed(() => ({
     <div class="grid grid-cols-1 gap-6 xl:grid-cols-2 print:block">
       <!-- Formulaire, guidé pas à pas -->
       <div class="space-y-4 print:hidden">
+        <EditorSection title="Importer un CV existant (PDF ou Word)" :default-open="false">
+          <EditorImportDropzone @imported="onImported" />
+        </EditorSection>
+
         <EditorStepper :steps="editorSteps" :current="currentStep" @update:current="currentStep = $event" />
 
         <div class="rounded-xl border border-slate-200 bg-white p-4">
