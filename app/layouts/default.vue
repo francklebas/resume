@@ -27,5 +27,10 @@ async function logout() {
     <main class="mx-auto max-w-6xl px-6 py-8 print:max-w-none print:p-0">
       <slot />
     </main>
+    <footer class="border-t border-slate-200 px-6 py-4 text-center text-xs text-slate-400 print:hidden">
+      <NuxtLink to="/cgu" class="hover:text-slate-600">CGU</NuxtLink>
+      <span class="mx-2">·</span>
+      <NuxtLink to="/confidentialite" class="hover:text-slate-600">Confidentialité</NuxtLink>
+    </footer>
   </div>
 </template>

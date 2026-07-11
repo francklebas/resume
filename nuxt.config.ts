@@ -13,7 +13,7 @@ export default defineNuxtConfig({
     redirectOptions: {
       login: '/login',
       callback: '/confirm',
-      exclude: ['/print/**'],
+      exclude: ['/print/**', '/cgu', '/confidentialite'],
     },
   },
   runtimeConfig: {
