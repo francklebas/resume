@@ -100,8 +100,9 @@ async function downloadPdf(template: CvTemplate) {
     })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
+    const namePrefix = slugify(draft.content.header.name) || slug
     a.href = url
-    a.download = `franck-lebas-${slug}${suffix}.pdf`
+    a.download = `${namePrefix}-${slug}${suffix}.pdf`
     a.click()
     URL.revokeObjectURL(url)
   }
