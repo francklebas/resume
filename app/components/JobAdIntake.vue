@@ -3,6 +3,8 @@ import type { CvRow } from '~/types/cv'
 
 const emit = defineEmits<{ created: [cv: CvRow] }>()
 
+const { consented, grant } = useAiConsent()
+
 const text = ref('')
 const image = ref<string | null>(null)
 const generating = ref(false)
@@ -28,7 +30,7 @@ function clearImage() {
   image.value = null
 }
 
-const canSubmit = computed(() => !generating.value && (text.value.trim().length > 0 || !!image.value))
+const canSubmit = computed(() => consented.value && !generating.value && (text.value.trim().length > 0 || !!image.value))
 
 async function submit() {
   if (!canSubmit.value) return
@@ -71,6 +73,14 @@ async function submit() {
     <p v-if="errorMsg" class="intake-error">
       {{ errorMsg }}
     </p>
+
+    <label v-if="!consented" class="intake-consent">
+      <input type="checkbox" @change="grant">
+      <span>
+        J'accepte que ce contenu soit transmis à Mistral AI pour analyse
+        (<NuxtLink to="/confidentialite" target="_blank">politique de confidentialité</NuxtLink>)
+      </span>
+    </label>
 
     <div class="intake-actions">
       <div v-if="image" class="intake-chip">
@@ -175,6 +185,25 @@ async function submit() {
   margin: 0.6rem 0 0;
   font-size: 0.8rem;
   color: #b91c1c;
+}
+
+.intake-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  color: #475569;
+  cursor: pointer;
+}
+
+.intake-consent input {
+  margin-top: 0.15rem;
+}
+
+.intake-consent :deep(a) {
+  color: var(--accent);
+  text-decoration: underline;
 }
 
 .intake-actions {

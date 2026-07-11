@@ -3,6 +3,8 @@ import type { CvContent } from '~/types/cv'
 
 const emit = defineEmits<{ imported: [content: CvContent] }>()
 
+const { consented, grant } = useAiConsent()
+
 const ACCEPTED_TYPES = [
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -59,7 +61,15 @@ function onFileInput(event: Event) {
 
 <template>
   <div>
+    <label v-if="!consented" class="flex items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-600">
+      <input type="checkbox" class="mt-0.5" @change="grant">
+      <span>
+        J'accepte que le contenu de ce fichier soit transmis à Mistral AI pour analyse
+        (<NuxtLink to="/confidentialite" target="_blank" class="text-blue-600 underline">politique de confidentialité</NuxtLink>)
+      </span>
+    </label>
     <label
+      v-else
       class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-8 text-center transition-colors"
       :class="dragOver ? 'border-blue-400 bg-blue-50' : 'border-slate-300 hover:bg-slate-50'"
       @dragover.prevent="dragOver = true"
