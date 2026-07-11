@@ -15,6 +15,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Colle le texte ou une capture de l\'annonce' })
   }
 
+  await enforceAiUsageLimit(event, 'tailor')
+
   const client = await serverSupabaseClient(event)
   const { data: base, error: baseError } = await client
     .from('cvs')

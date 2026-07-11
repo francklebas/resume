@@ -22,6 +22,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 413, statusMessage: 'Fichier trop volumineux (15 Mo max)' })
   }
 
+  await enforceAiUsageLimit(event, 'import')
+
   if (mime === 'application/pdf') {
     const content = await extractCvFromDocument({ pdfDataUri: dataUri, filename: body.filename })
     return { content }

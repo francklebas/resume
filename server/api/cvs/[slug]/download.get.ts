@@ -7,13 +7,16 @@ export default defineEventHandler(async (event) => {
   if (!user) throw createError({ statusCode: 401, statusMessage: 'Non authentifié' })
 
   const slug = getRouterParam(event, 'slug')!
+  const isAts = getQuery(event).template === 'ats'
   const origin = getRequestURL(event).origin
   const token = await signPrintToken(slug)
-  const pdf = await renderUrlToPdf(event, `${origin}/print/${slug}?token=${token}`)
+  const printUrl = `${origin}/print/${slug}?token=${token}${isAts ? '&template=ats' : ''}`
+  const pdf = await renderUrlToPdf(event, printUrl)
 
+  const suffix = isAts ? '-ats' : ''
   setHeaders(event, {
     'Content-Type': 'application/pdf',
-    'Content-Disposition': `attachment; filename="franck-lebas-${slug}.pdf"`,
+    'Content-Disposition': `attachment; filename="franck-lebas-${slug}${suffix}.pdf"`,
   })
   return pdf
 })

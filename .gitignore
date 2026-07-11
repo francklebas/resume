@@ -6,6 +6,9 @@
 .cache
 dist
 
+# Wrangler local state (tail-worker/ and any other standalone Worker)
+.wrangler
+
 # Node dependencies
 node_modules
 

@@ -12,6 +12,8 @@
     "enabled": true
   },
   "routes": [{ "pattern": "resume.francklebas.com", "custom_domain": true }],
+  // Transmet les traces d'exécution (erreurs, exceptions) au Tail Worker "resumes-tail" (voir tail-worker/).
+  "tail_consumers": [{ "service": "resumes-tail" }],
   // Browser Rendering pour la génération des PDF (@cloudflare/puppeteer) ; quota gratuit 10 min/jour.
   "browser": {
     "binding": "BROWSER"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CvContent, CvSnapshot } from '~/types/cv'
+import type { CvContent, CvSnapshot, CvTemplate } from '~/types/cv'
 
 const route = useRoute()
 const slug = route.params.slug as string
@@ -88,16 +88,20 @@ onMounted(() => {
   onUnmounted(() => observer.disconnect())
 })
 
-const downloading = ref(false)
+const downloadingTemplate = ref<CvTemplate | null>(null)
 
-async function downloadPdf() {
-  downloading.value = true
+async function downloadPdf(template: CvTemplate) {
+  downloadingTemplate.value = template
   try {
-    const blob = await $fetch<Blob>(`/api/cvs/${slug}/download`, { responseType: 'blob' })
+    const suffix = template === 'ats' ? '-ats' : ''
+    const blob = await $fetch<Blob>(`/api/cvs/${slug}/download`, {
+      responseType: 'blob',
+      query: template === 'ats' ? { template } : undefined,
+    })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `franck-lebas-${slug}.pdf`
+    a.download = `franck-lebas-${slug}${suffix}.pdf`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -105,7 +109,7 @@ async function downloadPdf() {
     saveError.value = errorMessage(e)
   }
   finally {
-    downloading.value = false
+    downloadingTemplate.value = null
   }
 }
 
@@ -162,10 +166,17 @@ const saveLabel = computed(() => ({
         </button>
         <button
           class="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-          :disabled="downloading"
-          @click="downloadPdf"
+          :disabled="downloadingTemplate !== null"
+          @click="downloadPdf('design')"
         >
-          {{ downloading ? 'Génération…' : 'Télécharger (PDF)' }}
+          {{ downloadingTemplate === 'design' ? 'Génération…' : 'Télécharger (PDF)' }}
+        </button>
+        <button
+          class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-50"
+          :disabled="downloadingTemplate !== null"
+          @click="downloadPdf('ats')"
+        >
+          {{ downloadingTemplate === 'ats' ? 'Génération…' : 'Télécharger (ATS)' }}
         </button>
         <button
           type="button"

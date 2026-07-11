@@ -51,6 +51,9 @@ export interface CvContent {
   languages: CvLanguage[]
 }
 
+/** 'design' = template soigné (par défaut), 'ats' = mise en page plate optimisée pour le parsing ATS */
+export type CvTemplate = 'design' | 'ats'
+
 export interface CvSnapshot {
   id: string
   cv_id: string
