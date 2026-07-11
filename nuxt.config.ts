@@ -15,6 +15,10 @@ export default defineNuxtConfig({
       callback: '/confirm',
       exclude: ['/print/**', '/cgu', '/confidentialite'],
     },
+    cookieOptions: {
+      // Défaut du module = true, refusé par les navigateurs en HTTP (dev local, tests E2E).
+      secure: process.env.NODE_ENV === 'production',
+    },
   },
   runtimeConfig: {
     // NUXT_MISTRAL_API_KEY
