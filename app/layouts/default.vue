@@ -15,13 +15,17 @@ async function logout() {
         <NuxtLink to="/" class="text-lg font-semibold tracking-tight">
           CV<span class="text-blue-600">Builder</span>
         </NuxtLink>
-        <button
-          v-if="user"
-          class="text-sm text-slate-500 hover:text-slate-900"
-          @click="logout"
-        >
-          Se déconnecter
-        </button>
+        <div v-if="user" class="flex items-center gap-4">
+          <NuxtLink to="/compte" class="text-sm text-slate-500 hover:text-slate-900">
+            Mon compte
+          </NuxtLink>
+          <button
+            class="text-sm text-slate-500 hover:text-slate-900"
+            @click="logout"
+          >
+            Se déconnecter
+          </button>
+        </div>
       </div>
     </header>
     <main class="mx-auto max-w-6xl px-6 py-8 print:max-w-none print:p-0">
