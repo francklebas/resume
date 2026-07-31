@@ -1,27 +1,53 @@
-import { serverSupabaseClient } from '#supabase/server'
+import { serverSupabaseClient, serverSupabaseServiceRole } from '#supabase/server'
 import type { H3Event } from 'h3'
 
-const DAILY_LIMIT = 20
+// Quotas de la démo publique — protègent les ressources payantes (Mistral + Cloudflare Browser Rendering).
+// Fenêtre glissante de 24h, sur deux niveaux : par utilisateur ET garde-fou global par app.
+const PER_USER_AI_LIMIT = 5 // générations IA (tailor + import) / 24h / utilisateur
+const PER_USER_PDF_LIMIT = 5 // exports PDF / 24h / utilisateur
+const GLOBAL_DAILY_LIMIT = 50 // toutes actions confondues / 24h / app
 
-// Plafond glissant de 24h, partagé entre tous les appels Mistral (tailor + import), par utilisateur.
-// Chaque tentative consomme un crédit, avant même l'appel Mistral (RLS scope déjà à l'utilisateur courant).
-export async function enforceAiUsageLimit(event: H3Event, endpoint: 'tailor' | 'import'): Promise<void> {
-  const client = await serverSupabaseClient(event)
+type UsageEndpoint = 'tailor' | 'import' | 'pdf'
+
+// À appeler AVANT l'opération coûteuse. Chaque tentative acceptée consomme un crédit.
+export async function enforceAiUsageLimit(event: H3Event, endpoint: UsageEndpoint): Promise<void> {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
-  const { count, error } = await client
+  // 1. Garde-fou global — client service-role (contourne la RLS, voit toutes les lignes de tous les users).
+  const admin = serverSupabaseServiceRole(event)
+  const { count: globalCount, error: globalError } = await admin
     .from('ai_usage')
     .select('id', { count: 'exact', head: true })
     .gte('created_at', since)
-  if (error) throw createError({ statusCode: 500, statusMessage: error.message })
-
-  if ((count ?? 0) >= DAILY_LIMIT) {
+  if (globalError) throw createError({ statusCode: 500, statusMessage: globalError.message })
+  if ((globalCount ?? 0) >= GLOBAL_DAILY_LIMIT) {
     throw createError({
       statusCode: 429,
-      statusMessage: `Limite de ${DAILY_LIMIT} générations IA par 24h atteinte. Réessaie plus tard.`,
+      statusMessage: `Limite quotidienne globale de la démo atteinte (${GLOBAL_DAILY_LIMIT} actions/24h). Réessaie demain.`,
     })
   }
 
+  // 2. Quota par utilisateur — client RLS (ne compte que les lignes du user courant).
+  const client = await serverSupabaseClient(event)
+  const isPdf = endpoint === 'pdf'
+  const perUserLimit = isPdf ? PER_USER_PDF_LIMIT : PER_USER_AI_LIMIT
+  const kinds: UsageEndpoint[] = isPdf ? ['pdf'] : ['tailor', 'import']
+
+  const { count: userCount, error: userError } = await client
+    .from('ai_usage')
+    .select('id', { count: 'exact', head: true })
+    .in('endpoint', kinds)
+    .gte('created_at', since)
+  if (userError) throw createError({ statusCode: 500, statusMessage: userError.message })
+  if ((userCount ?? 0) >= perUserLimit) {
+    const what = isPdf ? `${PER_USER_PDF_LIMIT} exports PDF` : `${PER_USER_AI_LIMIT} générations IA`
+    throw createError({
+      statusCode: 429,
+      statusMessage: `Limite de ${what} par 24h atteinte. Réessaie plus tard.`,
+    })
+  }
+
+  // 3. Enregistre la consommation (RLS : insère pour le user courant, user_id = auth.uid() par défaut).
   const { error: insertError } = await client.from('ai_usage').insert({ endpoint } as never)
   if (insertError) throw createError({ statusCode: 500, statusMessage: insertError.message })
 }

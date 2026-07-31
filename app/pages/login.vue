@@ -6,12 +6,32 @@ const email = ref('')
 const password = ref('')
 const mode = ref<'login' | 'signup'>('login')
 const pending = ref(false)
+const demoPending = ref(false)
+const showAccountForm = ref(false)
 const error = ref<string | null>(null)
 const info = ref<string | null>(null)
 
 watchEffect(() => {
   if (user.value) navigateTo('/')
 })
+
+// Accès démo sans friction : session anonyme (rôle `authenticated`, isolée par auth.uid()).
+// Le quota par-user et la RLS s'appliquent tels quels.
+async function startDemo() {
+  demoPending.value = true
+  error.value = null
+  try {
+    const { error: err } = await supabase.auth.signInAnonymously()
+    if (err) throw err
+    // succès → watchEffect redirige vers /
+  }
+  catch (e: unknown) {
+    error.value = errorMessage(e)
+  }
+  finally {
+    demoPending.value = false
+  }
+}
 
 async function submit() {
   pending.value = true
@@ -50,7 +70,25 @@ async function submit() {
     <h1 class="mb-6 text-xl font-semibold">
       {{ mode === 'login' ? 'Connexion' : 'Créer un compte' }}
     </h1>
-    <form class="space-y-4" @submit.prevent="submit">
+
+    <!-- Accès démo sans friction : un clic, ni e-mail ni mot de passe. -->
+    <button
+      type="button"
+      :disabled="demoPending"
+      class="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+      @click="startDemo"
+    >
+      {{ demoPending ? 'Ouverture de la démo…' : 'Tester la démo sans compte' }}
+    </button>
+    <button
+      type="button"
+      class="mt-3 block w-full text-center text-xs text-slate-500 hover:text-slate-900"
+      @click="showAccountForm = !showAccountForm"
+    >
+      {{ showAccountForm ? 'Masquer' : 'Se connecter avec un compte' }}
+    </button>
+
+    <form v-if="showAccountForm" class="mt-4 space-y-4" @submit.prevent="submit">
       <input
         v-model="email"
         type="email"
@@ -77,6 +115,7 @@ async function submit() {
     <p v-if="error" class="mt-4 text-sm text-red-600">{{ error }}</p>
     <p v-if="info" class="mt-4 text-sm text-emerald-600">{{ info }}</p>
     <button
+      v-if="showAccountForm"
       class="mt-6 text-xs text-slate-500 hover:text-slate-900"
       @click="mode = mode === 'login' ? 'signup' : 'login'"
     >

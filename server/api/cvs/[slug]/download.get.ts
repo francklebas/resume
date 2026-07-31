@@ -8,6 +8,9 @@ export default defineEventHandler(async (event) => {
   const user = await serverSupabaseUser(event)
   if (!user) throw createError({ statusCode: 401, statusMessage: 'Non authentifié' })
 
+  // Le PDF passe par Cloudflare Browser Rendering (payant) → soumis au quota.
+  await enforceAiUsageLimit(event, 'pdf')
+
   const slug = getRouterParam(event, 'slug')!
   const isAts = getQuery(event).template === 'ats'
 
