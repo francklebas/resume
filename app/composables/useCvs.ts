@@ -36,9 +36,12 @@ export function useCvs() {
   }
 
   async function updateContent(id: string, patch: { name?: string, content?: CvContent }): Promise<CvRow> {
+    // Le contenu change : match_score/match_summary datent d'une génération précédente et ne
+    // reflètent plus rien — on les efface plutôt que d'afficher un score périmé et trompeur.
+    const update = patch.content ? { ...patch, match_score: null, match_summary: null } : patch
     const { data, error } = await supabase
       .from('cvs')
-      .update(patch as never)
+      .update(update as never)
       .eq('id', id)
       .select()
       .single()

@@ -29,7 +29,8 @@ ${CV_CONTENT_SCHEMA}
 
 Règles :
 - Ne change ni les noms d'entreprises, ni les dates, ni les intitulés de poste (title/company/period restent identiques à l'original)
-- Tu peux reformuler le profil et les bullets pour mettre en avant ce qui correspond à l'offre, réordonner les compétences et les expériences par pertinence, ajuster la tagline
+- Tu peux reformuler le profil et les bullets pour mettre en avant ce qui correspond à l'offre, réordonner les compétences et les expériences par pertinence
+- "header.title" et "header.tagline" doivent rester fidèles au métier/domaine réel du candidat tel qu'il ressort des expériences du CV de base : tu peux les reformuler pour mettre en avant ce qui correspond à l'offre, mais jamais inventer un métier ou une spécialité absente des expériences (ex. ne pas déduire un intitulé "développeur" d'une simple ligne de formation si aucune expérience professionnelle ne le confirme)
 - Les segments **gras** sont supportés dans les bullets (même syntaxe que le CV de base)
 - N'invente aucun chiffre, aucune techno, aucun fait absent du CV de base
 - Réponds uniquement avec le JSON, sans texte autour, sans balise markdown`
@@ -87,6 +88,74 @@ export async function tailorCv(baseContent: CvContent, input: { text?: string, i
 
   const result = parsed as TailorResult
   return { ...result, matchScore: Math.max(0, Math.min(100, Math.round(result.matchScore))) }
+}
+
+const UPDATE_SYSTEM_PROMPT = `Tu mets à jour un CV existant en y intégrant des informations supplémentaires fournies explicitement par l'utilisateur (nouvelle expérience, formation, certification, changement de coordonnées, compétence acquise, etc.).
+
+Tu reçois :
+1. Le CV existant, au format JSON (schéma CvContent ci-dessous)
+2. Des instructions en texte libre décrivant ce qu'il faut ajouter ou changer
+
+Tu dois produire un JSON avec exactement deux clés :
+- "variantName": un nom court et lisible pour cette nouvelle version (ex. "CV — maj août 2026", ou basé sur ce qui a changé)
+- "content": un objet respectant strictement ce schéma TypeScript (mêmes clés, mêmes types) :
+
+${CV_CONTENT_SCHEMA}
+
+Règles :
+- Les informations données dans les instructions viennent de l'utilisateur lui-même : tu peux les ajouter au CV même si elles ne figuraient pas dans le CV existant, ce n'est pas "inventer"
+- En dehors de ce qui est demandé, ne change ni les noms d'entreprises, ni les dates, ni les intitulés de poste, ni le reste du contenu
+- Intègre les nouvelles informations dans la section la plus pertinente (expérience, compétence, formation, langue, coordonnées...) en respectant le format existant
+- Les segments **gras** sont supportés dans les bullets (même syntaxe que le CV existant)
+- N'invente rien au-delà du CV existant et des instructions fournies
+- Réponds uniquement avec le JSON, sans texte autour, sans balise markdown`
+
+interface UpdateResult {
+  variantName: string
+  content: CvContent
+}
+
+export async function updateCv(baseContent: CvContent, instructions: string): Promise<UpdateResult> {
+  const { mistralApiKey } = useRuntimeConfig()
+  if (!mistralApiKey) {
+    throw createError({ statusCode: 500, statusMessage: 'NUXT_MISTRAL_API_KEY manquant' })
+  }
+
+  const mistral = new Mistral({ apiKey: mistralApiKey })
+  const response = await mistral.chat.complete({
+    model: MODEL,
+    responseFormat: { type: 'json_object' },
+    messages: [
+      { role: 'system', content: UPDATE_SYSTEM_PROMPT },
+      {
+        role: 'user',
+        content: `CV existant :\n${JSON.stringify(baseContent)}\n\nInstructions :\n${instructions}`,
+      },
+    ],
+  })
+
+  const raw = response.choices?.[0]?.message?.content
+  if (typeof raw !== 'string') {
+    throw createError({ statusCode: 502, statusMessage: 'Réponse Mistral vide ou invalide' })
+  }
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  }
+  catch {
+    throw createError({ statusCode: 502, statusMessage: 'Réponse Mistral : JSON invalide' })
+  }
+
+  if (
+    !parsed || typeof parsed !== 'object'
+    || !('variantName' in parsed) || !('content' in parsed)
+    || typeof (parsed as Record<string, unknown>).variantName !== 'string'
+  ) {
+    throw createError({ statusCode: 502, statusMessage: 'Réponse Mistral : schéma inattendu' })
+  }
+
+  return parsed as UpdateResult
 }
 
 const EXTRACT_SYSTEM_PROMPT = `Tu extrais le contenu structuré d'un CV à partir d'un document fourni (PDF, ou texte brut issu d'un fichier Word).

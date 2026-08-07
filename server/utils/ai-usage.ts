@@ -1,20 +1,30 @@
-import { serverSupabaseClient, serverSupabaseServiceRole } from '#supabase/server'
+import { serverSupabaseClient, serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
 import type { H3Event } from 'h3'
 
 // Quotas de la démo publique — protègent les ressources payantes (Mistral + Cloudflare Browser Rendering).
 // Fenêtre glissante de 24h, sur deux niveaux : par utilisateur ET garde-fou global par app.
-const PER_USER_AI_LIMIT = 5 // générations IA (tailor + import) / 24h / utilisateur
+const PER_USER_AI_LIMIT = 5 // générations IA (tailor + import + update) / 24h / utilisateur
 const PER_USER_PDF_LIMIT = 5 // exports PDF / 24h / utilisateur
 const GLOBAL_DAILY_LIMIT = 50 // toutes actions confondues / 24h / app
 
-type UsageEndpoint = 'tailor' | 'import' | 'pdf'
+type UsageEndpoint = 'tailor' | 'import' | 'update' | 'pdf'
 
 // À appeler AVANT l'opération coûteuse. Chaque tentative acceptée consomme un crédit.
 export async function enforceAiUsageLimit(event: H3Event, endpoint: UsageEndpoint): Promise<void> {
+  const admin = serverSupabaseServiceRole(event)
+
+  // 0. Compte admin (créateur du SaaS, positionné manuellement en base) : aucune restriction, et on
+  // ne consomme pas non plus le quota global partagé par les comptes de démo.
+  const user = await serverSupabaseUser(event)
+  if (user) {
+    const { data: profile, error: profileError } = await admin.from('profiles').select('is_admin').eq('user_id', user.sub).maybeSingle()
+    if (profileError) throw createError({ statusCode: 500, statusMessage: profileError.message })
+    if (profile?.is_admin) return
+  }
+
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
   // 1. Garde-fou global — client service-role (contourne la RLS, voit toutes les lignes de tous les users).
-  const admin = serverSupabaseServiceRole(event)
   const { count: globalCount, error: globalError } = await admin
     .from('ai_usage')
     .select('id', { count: 'exact', head: true })
@@ -31,7 +41,7 @@ export async function enforceAiUsageLimit(event: H3Event, endpoint: UsageEndpoin
   const client = await serverSupabaseClient(event)
   const isPdf = endpoint === 'pdf'
   const perUserLimit = isPdf ? PER_USER_PDF_LIMIT : PER_USER_AI_LIMIT
-  const kinds: UsageEndpoint[] = isPdf ? ['pdf'] : ['tailor', 'import']
+  const kinds: UsageEndpoint[] = isPdf ? ['pdf'] : ['tailor', 'import', 'update']
 
   const { count: userCount, error: userError } = await client
     .from('ai_usage')

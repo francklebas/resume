@@ -65,7 +65,9 @@ function matchBadgeClass(score: number): string {
       <h1 class="text-2xl font-semibold tracking-tight">Mes CV</h1>
     </div>
 
-    <JobAdIntake v-if="cvs.some(c => c.is_base)" @created="() => refresh()" />
+    <JobAdIntake :has-base="cvs.some(c => c.is_base)" @created="() => refresh()" />
+
+    <CvUpdateIntake :cvs="cvs" @created="() => refresh()" />
 
     <p v-if="errorMsg" class="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">
       {{ errorMsg }}

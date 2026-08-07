@@ -40,7 +40,7 @@ defineProps<{ content: CvContent }>()
         <p class="ats-exp-line">
           {{ exp.company }}<span v-if="exp.location"> · {{ exp.location }}</span> · <em>{{ exp.period }}</em>
         </p>
-        <p v-if="exp.context" class="ats-exp-context">{{ exp.context }}</p>
+        <p v-if="exp.context" class="ats-exp-context" v-html="richText(exp.context)" />
         <ul class="ats-bullets">
           <li v-for="(bullet, j) in exp.bullets" :key="j" v-html="richText(bullet)" />
         </ul>
@@ -53,7 +53,7 @@ defineProps<{ content: CvContent }>()
       <h2 class="ats-section-title">Key Metrics</h2>
       <ul class="ats-metrics">
         <li v-for="metric in content.metrics" :key="metric.label">
-          <strong>{{ metric.value }}</strong> — {{ metric.label }}
+          <strong>{{ metric.value }}</strong> - {{ metric.label }}
         </li>
       </ul>
     </section>

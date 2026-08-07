@@ -15,9 +15,10 @@ export default defineEventHandler(async (event) => {
   const isAts = getQuery(event).template === 'ats'
 
   const client = await serverSupabaseClient(event)
-  const { data: cv } = await client.from('cvs').select('content').eq('slug', slug).single()
+  const { data: cv } = await client.from('cvs').select('name, content').eq('slug', slug).single()
   const ownerName = (cv?.content as unknown as CvContent | undefined)?.header?.name
   const filenamePrefix = (ownerName && slugify(ownerName)) || slug
+  const variantSuffix = (cv?.name && slugify(cv.name)) || slug
 
   const origin = getRequestURL(event).origin
   const token = await signPrintToken(slug)
@@ -27,7 +28,7 @@ export default defineEventHandler(async (event) => {
   const suffix = isAts ? '-ats' : ''
   setHeaders(event, {
     'Content-Type': 'application/pdf',
-    'Content-Disposition': `attachment; filename="${filenamePrefix}-${slug}${suffix}.pdf"`,
+    'Content-Disposition': `attachment; filename="${filenamePrefix}-${variantSuffix}${suffix}.pdf"`,
   })
   return pdf
 })

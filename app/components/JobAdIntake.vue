@@ -1,14 +1,96 @@
 <script setup lang="ts">
 import type { CvRow } from '~/types/cv'
 
+// Sans CV de base en BDD, l'adaptation n'est possible qu'à partir d'un CV joint.
+const props = defineProps<{ hasBase?: boolean }>()
 const emit = defineEmits<{ created: [cv: CvRow] }>()
 
 const { consented, grant } = useAiConsent()
 
+const EXTENSION_MIME: Record<string, string> = {
+  pdf: 'application/pdf',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  odt: 'application/vnd.oasis.opendocument.text',
+}
+const ACCEPTED_TYPES = Object.values(EXTENSION_MIME)
+
+// Au glisser-déposer, file.type est souvent vide ou générique (application/octet-stream)
+// selon le gestionnaire de fichiers : on retombe alors sur l'extension.
+function resolveDocMime(file: File): string | null {
+  if (ACCEPTED_TYPES.includes(file.type)) return file.type
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
+  return EXTENSION_MIME[ext] ?? null
+}
+
 const text = ref('')
 const image = ref<string | null>(null)
+const sourceFile = ref<{ name: string, dataUri: string } | null>(null)
 const generating = ref(false)
 const errorMsg = ref<string | null>(null)
+
+// dragenter/dragleave se déclenchent aussi sur les enfants : on compte les entrées/sorties.
+const dragDepth = ref(0)
+const dragOver = computed(() => dragDepth.value > 0)
+
+// Firefox refuse le drop (l'event 'drop' ne se déclenche même pas) si dropEffect n'est pas
+// explicitement positionné pendant dragover — preventDefault() seul suffit sous Chrome mais pas ici.
+function onDragEnter(event: DragEvent) {
+  dragDepth.value += 1
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'
+}
+
+function onDragOver(event: DragEvent) {
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'
+}
+
+function readAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(file)
+  })
+}
+
+async function attachFile(file: File) {
+  // Une image déposée = capture de l'annonce, comme au collage.
+  if (file.type.startsWith('image/')) {
+    errorMsg.value = null
+    image.value = await readAsDataUrl(file)
+    return
+  }
+
+  const mime = resolveDocMime(file)
+  if (!mime) {
+    errorMsg.value = 'Formats supportés : PDF, Word (.docx), OpenDocument (.odt), ou une capture de l\'annonce'
+    return
+  }
+  errorMsg.value = null
+  const dataUri = await readAsDataUrl(file)
+  // Le serveur se fie au type déclaré dans le data URI : on le réaligne sur le type résolu.
+  sourceFile.value = {
+    name: file.name,
+    dataUri: dataUri.replace(/^data:[^;,]*;base64,/, `data:${mime};base64,`),
+  }
+}
+
+function onDrop(event: DragEvent) {
+  dragDepth.value = 0
+  if (generating.value) return
+  const file = event.dataTransfer?.files?.[0]
+  if (file) attachFile(file)
+}
+
+function onFileInput(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (file) attachFile(file)
+  input.value = '' // permet de re-sélectionner le même fichier après suppression
+}
+
+function clearSourceFile() {
+  sourceFile.value = null
+}
 
 function onPaste(event: ClipboardEvent) {
   const items = event.clipboardData?.items
@@ -30,7 +112,13 @@ function clearImage() {
   image.value = null
 }
 
-const canSubmit = computed(() => consented.value && !generating.value && (text.value.trim().length > 0 || !!image.value))
+const needsSourceFile = computed(() => !props.hasBase && !sourceFile.value)
+
+const canSubmit = computed(() =>
+  consented.value
+  && !generating.value
+  && !needsSourceFile.value
+  && (text.value.trim().length > 0 || !!image.value))
 
 async function submit() {
   if (!canSubmit.value) return
@@ -39,7 +127,12 @@ async function submit() {
   try {
     const cv = await $fetch<CvRow>('/api/cvs/tailor', {
       method: 'POST',
-      body: { text: text.value.trim() || undefined, image: image.value ?? undefined },
+      body: {
+        text: text.value.trim() || undefined,
+        image: image.value ?? undefined,
+        sourceFile: sourceFile.value?.dataUri,
+        sourceFilename: sourceFile.value?.name,
+      },
     })
     emit('created', cv)
     await navigateTo(`/editor/${cv.slug}`)
@@ -54,7 +147,14 @@ async function submit() {
 </script>
 
 <template>
-  <div class="intake" :class="{ 'is-generating': generating }">
+  <div
+    class="intake"
+    :class="{ 'is-generating': generating, 'is-dragover': dragOver }"
+    @dragenter.prevent="onDragEnter"
+    @dragleave.prevent="dragDepth -= 1"
+    @dragover.prevent="onDragOver"
+    @drop.prevent="onDrop"
+  >
     <div class="intake-scan" aria-hidden="true" />
 
     <p class="intake-eyebrow">
@@ -64,14 +164,24 @@ async function submit() {
     <textarea
       v-model="text"
       rows="5"
-      placeholder="Colle le texte de l'offre, ou une capture d'écran (⌘V) — le CV de base sera adapté automatiquement."
+      :placeholder="sourceFile
+        ? 'Colle le texte de l\'offre, ou une capture d\'écran (⌘V) — le CV joint sera adapté.'
+        : 'Colle le texte de l\'offre, ou une capture d\'écran (⌘V) — le CV de base sera adapté automatiquement. Tu peux aussi déposer un CV (PDF, Word) pour l\'adapter à la place.'"
       class="intake-textarea"
       :disabled="generating"
       @paste="onPaste"
     />
 
+    <div v-if="dragOver" class="intake-dropzone">
+      Dépose ton CV (PDF, Word ou OpenDocument)
+    </div>
+
     <p v-if="errorMsg" class="intake-error">
       {{ errorMsg }}
+    </p>
+
+    <p v-else-if="needsSourceFile" class="intake-hint">
+      Pas encore de CV de base : dépose ton CV (PDF, Word) ici pour l'adapter à l'annonce.
     </p>
 
     <label v-if="!consented" class="intake-consent">
@@ -83,14 +193,33 @@ async function submit() {
     </label>
 
     <div class="intake-actions">
-      <div v-if="image" class="intake-chip">
-        <img :src="image" alt="" class="intake-chip-thumb">
-        <span>Capture collée</span>
-        <button type="button" class="intake-chip-remove" :disabled="generating" @click="clearImage">
-          ✕
-        </button>
+      <div class="intake-chips">
+        <div v-if="image" class="intake-chip">
+          <img :src="image" alt="" class="intake-chip-thumb">
+          <span>Capture collée</span>
+          <button type="button" class="intake-chip-remove" :disabled="generating" @click="clearImage">
+            ✕
+          </button>
+        </div>
+
+        <div v-if="sourceFile" class="intake-chip">
+          <span aria-hidden="true">📄</span>
+          <span class="intake-chip-name">{{ sourceFile.name }}</span>
+          <button type="button" class="intake-chip-remove" :disabled="generating" @click="clearSourceFile">
+            ✕
+          </button>
+        </div>
+        <label v-else class="intake-attach">
+          <input
+            type="file"
+            accept=".pdf,.docx,.odt"
+            class="sr-only"
+            :disabled="generating"
+            @change="onFileInput"
+          >
+          <span>📎 Joindre un CV</span>
+        </label>
       </div>
-      <span v-else />
 
       <button
         type="button"
@@ -187,6 +316,12 @@ async function submit() {
   color: #b91c1c;
 }
 
+.intake-hint {
+  margin: 0.6rem 0 0;
+  font-size: 0.8rem;
+  color: #475569;
+}
+
 .intake-consent {
   display: flex;
   align-items: flex-start;
@@ -212,6 +347,51 @@ async function submit() {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
+}
+
+.is-dragover {
+  border-color: var(--accent);
+  background: #eef3fd;
+}
+
+.intake-dropzone {
+  margin-top: 0.6rem;
+  border: 2px dashed var(--accent);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--accent);
+  pointer-events: none;
+}
+
+.intake-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.intake-attach {
+  cursor: pointer;
+  border-radius: 999px;
+  border: 1px dashed #c3d0e8;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+.intake-attach:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.intake-chip-name {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .intake-chip {

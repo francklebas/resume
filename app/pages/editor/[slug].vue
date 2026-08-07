@@ -101,8 +101,9 @@ async function downloadPdf(template: CvTemplate) {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     const namePrefix = slugify(draft.content.header.name) || slug
+    const variantSuffix = slugify(draft.name) || slug
     a.href = url
-    a.download = `${namePrefix}-${slug}${suffix}.pdf`
+    a.download = `${namePrefix}-${variantSuffix}${suffix}.pdf`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -258,7 +259,7 @@ const saveLabel = computed(() => ({
 
       <!-- Préview -->
       <div ref="previewWrap" class="min-w-0 print:w-full">
-        <div class="sticky top-6 print:static">
+        <div class="sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto print:static print:max-h-none print:overflow-visible">
           <div
             class="origin-top-left shadow-lg print:shadow-none"
             :style="{ transform: `scale(${scale})`, width: '210mm' }"

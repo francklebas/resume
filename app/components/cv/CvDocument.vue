@@ -33,8 +33,8 @@ defineProps<{ content: CvContent }>()
       <h2 class="cv-section-title">Core Technical Skills</h2>
       <div class="cv-skills-grid">
         <div v-for="group in content.skills" :key="group.category" class="cv-skill-group">
-          <span class="cv-skill-label">{{ group.category }}</span>
-          <span class="cv-skill-items">{{ group.items.join(' · ') }}</span>
+          <h3 class="cv-skill-label">{{ group.category }}</h3>
+          <p class="cv-skill-items">{{ group.items.join(' · ') }}</p>
         </div>
       </div>
     </section>
@@ -49,7 +49,7 @@ defineProps<{ content: CvContent }>()
           <span v-if="exp.location" class="cv-exp-loc"> · {{ exp.location }}</span>
           <span class="cv-exp-period"> · <em>{{ exp.period }}</em></span>
         </p>
-        <p v-if="exp.context" class="cv-exp-context">{{ exp.context }}</p>
+        <p v-if="exp.context" class="cv-exp-context" v-html="richText(exp.context)" />
         <ul class="cv-bullets">
           <li v-for="(bullet, j) in exp.bullets" :key="j" v-html="richText(bullet)" />
         </ul>
@@ -167,30 +167,33 @@ defineProps<{ content: CvContent }>()
   text-align: justify;
 }
 
-/* Skills grid */
+/* Skills grid — colonnes en flux libre (pas de grille alignée par ligne) pour éviter les
+   blocs à hauteur fixe avec du vide quand une catégorie a peu d'items. */
 .cv-skills-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2mm 6mm;
+  columns: 2;
+  column-gap: 8mm;
 }
 
 .cv-skill-group {
-  display: flex;
-  gap: 2mm;
-  font-size: 9.5pt;
+  break-inside: avoid;
+  margin-bottom: 3mm;
 }
 
 .cv-skill-label {
-  flex: 0 0 34%;
-  background: #f2f2f2;
-  color: var(--muted);
+  display: block;
+  color: var(--accent);
+  font-size: 9pt;
   font-weight: 700;
-  padding: 1.6mm 3mm;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin: 0 0 1mm;
 }
 
 .cv-skill-items {
-  flex: 1;
-  padding: 1.6mm 3mm;
+  display: block;
+  margin: 0;
+  font-size: 9.5pt;
+  line-height: 1.5;
 }
 
 /* Tables (metrics) */
