@@ -17,18 +17,18 @@ export interface CvUpload {
 // consommer un crédit sur un fichier qu'on refusera de toute façon.
 export function parseCvUpload(dataUri: string, filename?: string): CvUpload {
   const match = dataUri.match(/^data:([^;]+);base64,(.+)$/)
-  if (!match) throw createError({ statusCode: 400, statusMessage: 'Fichier invalide' })
+  if (!match) throw createError({ statusCode: 400, message: 'Fichier invalide' })
   const [, mime, base64] = match as unknown as [string, string, string]
 
   if (mime !== PDF_MIME && mime !== WORD_MIME && mime !== ODT_MIME) {
     throw createError({
       statusCode: 415,
-      statusMessage: 'Format non supporté — utilise un PDF, un fichier Word (.docx) ou OpenDocument (.odt)',
+      message: 'Format non supporté — utilise un PDF, un fichier Word (.docx) ou OpenDocument (.odt)',
     })
   }
 
   if (base64.length * 0.75 > MAX_SIZE_BYTES) {
-    throw createError({ statusCode: 413, statusMessage: 'Fichier trop volumineux (15 Mo max)' })
+    throw createError({ statusCode: 413, message: 'Fichier trop volumineux (15 Mo max)' })
   }
 
   return { mime, base64, dataUri, filename }
@@ -45,7 +45,7 @@ export async function extractCvFromUpload(upload: CvUpload): Promise<CvContent> 
     ? await extractDocxText(binary.buffer)
     : await extractOdtText(binary.buffer)
   if (!text.trim()) {
-    throw createError({ statusCode: 422, statusMessage: 'Impossible de lire le contenu de ce document' })
+    throw createError({ statusCode: 422, message: 'Impossible de lire le contenu de ce document' })
   }
   return extractCvFromDocument({ text })
 }

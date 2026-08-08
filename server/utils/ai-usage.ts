@@ -18,7 +18,7 @@ export async function enforceAiUsageLimit(event: H3Event, endpoint: UsageEndpoin
   const user = await serverSupabaseUser(event)
   if (user) {
     const { data: profile, error: profileError } = await admin.from('profiles').select('is_admin').eq('user_id', user.sub).maybeSingle()
-    if (profileError) throw createError({ statusCode: 500, statusMessage: profileError.message })
+    if (profileError) throw createError({ statusCode: 500, message: profileError.message })
     if (profile?.is_admin) return
   }
 
@@ -29,11 +29,11 @@ export async function enforceAiUsageLimit(event: H3Event, endpoint: UsageEndpoin
     .from('ai_usage')
     .select('id', { count: 'exact', head: true })
     .gte('created_at', since)
-  if (globalError) throw createError({ statusCode: 500, statusMessage: globalError.message })
+  if (globalError) throw createError({ statusCode: 500, message: globalError.message })
   if ((globalCount ?? 0) >= GLOBAL_DAILY_LIMIT) {
     throw createError({
       statusCode: 429,
-      statusMessage: `Limite quotidienne globale de la démo atteinte (${GLOBAL_DAILY_LIMIT} actions/24h). Réessaie demain.`,
+      message: `Limite quotidienne globale de la démo atteinte (${GLOBAL_DAILY_LIMIT} actions/24h). Réessaie demain.`,
     })
   }
 
@@ -48,16 +48,16 @@ export async function enforceAiUsageLimit(event: H3Event, endpoint: UsageEndpoin
     .select('id', { count: 'exact', head: true })
     .in('endpoint', kinds)
     .gte('created_at', since)
-  if (userError) throw createError({ statusCode: 500, statusMessage: userError.message })
+  if (userError) throw createError({ statusCode: 500, message: userError.message })
   if ((userCount ?? 0) >= perUserLimit) {
     const what = isPdf ? `${PER_USER_PDF_LIMIT} exports PDF` : `${PER_USER_AI_LIMIT} générations IA`
     throw createError({
       statusCode: 429,
-      statusMessage: `Limite de ${what} par 24h atteinte. Réessaie plus tard.`,
+      message: `Limite de ${what} par 24h atteinte. Réessaie plus tard.`,
     })
   }
 
   // 3. Enregistre la consommation (RLS : insère pour le user courant, user_id = auth.uid() par défaut).
   const { error: insertError } = await client.from('ai_usage').insert({ endpoint } as never)
-  if (insertError) throw createError({ statusCode: 500, statusMessage: insertError.message })
+  if (insertError) throw createError({ statusCode: 500, message: insertError.message })
 }

@@ -6,7 +6,7 @@ import type { CvContent } from '~/types/cv'
 // et le renvoie directement en téléchargement — pas de stockage, régénéré à chaque appel.
 export default defineEventHandler(async (event) => {
   const user = await serverSupabaseUser(event)
-  if (!user) throw createError({ statusCode: 401, statusMessage: 'Non authentifié' })
+  if (!user) throw createError({ statusCode: 401, message: 'Non authentifié' })
 
   // Le PDF passe par Cloudflare Browser Rendering (payant) → soumis au quota.
   await enforceAiUsageLimit(event, 'pdf')

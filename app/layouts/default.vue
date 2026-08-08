@@ -13,7 +13,7 @@ async function logout() {
     <header class="border-b border-slate-200 bg-white print:hidden">
       <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
         <NuxtLink to="/" class="text-lg font-semibold tracking-tight">
-          CV<span class="text-blue-600">Builder</span>
+          Resume<span class="text-blue-600">AI</span>
         </NuxtLink>
         <div v-if="user" class="flex items-center gap-4">
           <NuxtLink to="/compte" class="text-sm text-slate-500 hover:text-slate-900">

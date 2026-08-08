@@ -6,13 +6,13 @@ import type { CvContent, CvRow } from '~/types/cv'
 // le CV source n'est jamais modifié en place.
 export default defineEventHandler(async (event) => {
   const user = await serverSupabaseUser(event)
-  if (!user) throw createError({ statusCode: 401, statusMessage: 'Non authentifié' })
+  if (!user) throw createError({ statusCode: 401, message: 'Non authentifié' })
 
   const body = await readBody<{ sourceCvId?: string, instructions?: string }>(event)
   const sourceCvId = body.sourceCvId
   const instructions = body.instructions?.trim()
-  if (!sourceCvId) throw createError({ statusCode: 400, statusMessage: 'CV source manquant' })
-  if (!instructions) throw createError({ statusCode: 400, statusMessage: 'Décris ce qu\'il faut ajouter ou changer' })
+  if (!sourceCvId) throw createError({ statusCode: 400, message: 'CV source manquant' })
+  if (!instructions) throw createError({ statusCode: 400, message: 'Décris ce qu\'il faut ajouter ou changer' })
 
   await enforceAiUsageLimit(event, 'update')
 
@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
     .select('content')
     .eq('id', sourceCvId)
     .single()
-  if (sourceError || !source) throw createError({ statusCode: 404, statusMessage: 'CV source introuvable' })
+  if (sourceError || !source) throw createError({ statusCode: 404, message: 'CV source introuvable' })
 
   const { variantName, content } = await updateCv(source.content as unknown as CvContent, instructions)
 
@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
     .select()
     .single()
   if (insertError || !created) {
-    throw createError({ statusCode: 500, statusMessage: insertError?.message ?? 'Création impossible' })
+    throw createError({ statusCode: 500, message: insertError?.message ?? 'Création impossible' })
   }
 
   return created as unknown as CvRow

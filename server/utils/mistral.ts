@@ -1,7 +1,30 @@
 import { Mistral } from '@mistralai/mistralai'
+import type { ChatCompletionResponse } from '@mistralai/mistralai/models/components'
 import type { CvContent } from '~/types/cv'
 
 const MODEL = 'mistral-medium-latest'
+// Le contenu d'un CV complet (schéma + expériences) aller-retour peut représenter plusieurs
+// milliers de tokens ; sans plafond explicite, une réponse tronquée produit un JSON invalide.
+const MAX_TOKENS = 8000
+
+// Un JSON invalide vient presque toujours d'une réponse tronquée (finishReason "length") plutôt
+// que d'un vrai problème de format — message dédié pour orienter vers un nouvel essai.
+function parseMistralJson(response: ChatCompletionResponse): unknown {
+  const choice = response.choices?.[0]
+  const raw = choice?.message?.content
+  if (typeof raw !== 'string') {
+    throw createError({ statusCode: 502, message: 'Réponse Mistral vide ou invalide' })
+  }
+  if (choice?.finishReason === 'length') {
+    throw createError({ statusCode: 502, message: 'Réponse Mistral tronquée (contenu trop long) — réessaie' })
+  }
+  try {
+    return JSON.parse(raw)
+  }
+  catch {
+    throw createError({ statusCode: 502, message: 'Réponse Mistral : JSON invalide' })
+  }
+}
 
 const CV_CONTENT_SCHEMA = `interface CvContent {
   header: { name: string, title: string, tagline: string, location: string, availableImmediately: boolean, phone: string, email: string, linkedin: string }
@@ -45,7 +68,7 @@ interface TailorResult {
 export async function tailorCv(baseContent: CvContent, input: { text?: string, image?: string }): Promise<TailorResult> {
   const { mistralApiKey } = useRuntimeConfig()
   if (!mistralApiKey) {
-    throw createError({ statusCode: 500, statusMessage: 'NUXT_MISTRAL_API_KEY manquant' })
+    throw createError({ statusCode: 500, message: 'NUXT_MISTRAL_API_KEY manquant' })
   }
 
   const content: ({ type: 'text', text: string } | { type: 'image_url', imageUrl: string })[] = [
@@ -58,24 +81,14 @@ export async function tailorCv(baseContent: CvContent, input: { text?: string, i
   const response = await mistral.chat.complete({
     model: MODEL,
     responseFormat: { type: 'json_object' },
+    maxTokens: MAX_TOKENS,
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content },
     ],
   })
 
-  const raw = response.choices?.[0]?.message?.content
-  if (typeof raw !== 'string') {
-    throw createError({ statusCode: 502, statusMessage: 'Réponse Mistral vide ou invalide' })
-  }
-
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(raw)
-  }
-  catch {
-    throw createError({ statusCode: 502, statusMessage: 'Réponse Mistral : JSON invalide' })
-  }
+  const parsed = parseMistralJson(response)
 
   if (
     !parsed || typeof parsed !== 'object'
@@ -83,7 +96,7 @@ export async function tailorCv(baseContent: CvContent, input: { text?: string, i
     || typeof (parsed as Record<string, unknown>).variantName !== 'string'
     || typeof (parsed as Record<string, unknown>).matchScore !== 'number'
   ) {
-    throw createError({ statusCode: 502, statusMessage: 'Réponse Mistral : schéma inattendu' })
+    throw createError({ statusCode: 502, message: 'Réponse Mistral : schéma inattendu' })
   }
 
   const result = parsed as TailorResult
@@ -118,13 +131,14 @@ interface UpdateResult {
 export async function updateCv(baseContent: CvContent, instructions: string): Promise<UpdateResult> {
   const { mistralApiKey } = useRuntimeConfig()
   if (!mistralApiKey) {
-    throw createError({ statusCode: 500, statusMessage: 'NUXT_MISTRAL_API_KEY manquant' })
+    throw createError({ statusCode: 500, message: 'NUXT_MISTRAL_API_KEY manquant' })
   }
 
   const mistral = new Mistral({ apiKey: mistralApiKey })
   const response = await mistral.chat.complete({
     model: MODEL,
     responseFormat: { type: 'json_object' },
+    maxTokens: MAX_TOKENS,
     messages: [
       { role: 'system', content: UPDATE_SYSTEM_PROMPT },
       {
@@ -134,25 +148,14 @@ export async function updateCv(baseContent: CvContent, instructions: string): Pr
     ],
   })
 
-  const raw = response.choices?.[0]?.message?.content
-  if (typeof raw !== 'string') {
-    throw createError({ statusCode: 502, statusMessage: 'Réponse Mistral vide ou invalide' })
-  }
-
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(raw)
-  }
-  catch {
-    throw createError({ statusCode: 502, statusMessage: 'Réponse Mistral : JSON invalide' })
-  }
+  const parsed = parseMistralJson(response)
 
   if (
     !parsed || typeof parsed !== 'object'
     || !('variantName' in parsed) || !('content' in parsed)
     || typeof (parsed as Record<string, unknown>).variantName !== 'string'
   ) {
-    throw createError({ statusCode: 502, statusMessage: 'Réponse Mistral : schéma inattendu' })
+    throw createError({ statusCode: 502, message: 'Réponse Mistral : schéma inattendu' })
   }
 
   return parsed as UpdateResult
@@ -175,7 +178,7 @@ Règles :
 export async function extractCvFromDocument(doc: { pdfDataUri: string, filename?: string } | { text: string }): Promise<CvContent> {
   const { mistralApiKey } = useRuntimeConfig()
   if (!mistralApiKey) {
-    throw createError({ statusCode: 500, statusMessage: 'NUXT_MISTRAL_API_KEY manquant' })
+    throw createError({ statusCode: 500, message: 'NUXT_MISTRAL_API_KEY manquant' })
   }
 
   const content: ({ type: 'text', text: string } | { type: 'document_url', documentUrl: string, documentName?: string })[] = 'pdfDataUri' in doc
@@ -186,27 +189,17 @@ export async function extractCvFromDocument(doc: { pdfDataUri: string, filename?
   const response = await mistral.chat.complete({
     model: MODEL,
     responseFormat: { type: 'json_object' },
+    maxTokens: MAX_TOKENS,
     messages: [
       { role: 'system', content: EXTRACT_SYSTEM_PROMPT },
       { role: 'user', content },
     ],
   })
 
-  const raw = response.choices?.[0]?.message?.content
-  if (typeof raw !== 'string') {
-    throw createError({ statusCode: 502, statusMessage: 'Réponse Mistral vide ou invalide' })
-  }
-
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(raw)
-  }
-  catch {
-    throw createError({ statusCode: 502, statusMessage: 'Réponse Mistral : JSON invalide' })
-  }
+  const parsed = parseMistralJson(response)
 
   if (!parsed || typeof parsed !== 'object' || !('header' in parsed) || !('experiences' in parsed)) {
-    throw createError({ statusCode: 502, statusMessage: 'Réponse Mistral : schéma inattendu' })
+    throw createError({ statusCode: 502, message: 'Réponse Mistral : schéma inattendu' })
   }
 
   const result = parsed as CvContent

@@ -8,12 +8,12 @@ export default defineEventHandler(async (event) => {
   const { token } = getQuery(event)
 
   if (typeof token !== 'string' || !(await verifyPrintToken(slug, token)))
-    throw createError({ statusCode: 401, statusMessage: 'Invalid or expired print token' })
+    throw createError({ statusCode: 401, message: 'Invalid or expired print token' })
 
   const client = serverSupabaseServiceRole(event)
   const { data, error } = await client.from('cvs').select('content').eq('slug', slug).single()
   if (error || !data)
-    throw createError({ statusCode: 404, statusMessage: 'CV not found' })
+    throw createError({ statusCode: 404, message: 'CV not found' })
 
   return { content: data.content as unknown as CvContent }
 })

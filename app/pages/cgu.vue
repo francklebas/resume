@@ -11,7 +11,7 @@ definePageMeta({ layout: 'legal' })
 
     <h2>1. Objet</h2>
     <p>
-      Les présentes conditions régissent l'utilisation du service CV Builder, édité par
+      Les présentes conditions régissent l'utilisation du service ResumeAI, édité par
       <strong>🔶 [ton nom ou ta raison sociale]</strong>. L'utilisation du service implique
       l'acceptation pleine et entière de ces conditions.
     </p>

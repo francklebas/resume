@@ -23,7 +23,7 @@ export async function renderUrlToPdf(event: H3Event, url: string): Promise<Uint8
   if (!binding) {
     throw createError({
       statusCode: 500,
-      statusMessage: 'Binding Browser Rendering « BROWSER » absent (wrangler.jsonc)',
+      message: 'Binding Browser Rendering « BROWSER » absent (wrangler.jsonc)',
     })
   }
   const browser = await puppeteer.launch(binding)

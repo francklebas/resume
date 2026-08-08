@@ -17,7 +17,7 @@ export async function extractOdtText(arrayBuffer: ArrayBuffer): Promise<string> 
   const zip = await JSZip.loadAsync(arrayBuffer)
   const contentFile = zip.file('content.xml')
   if (!contentFile) {
-    throw createError({ statusCode: 422, statusMessage: 'Fichier .odt invalide (content.xml introuvable)' })
+    throw createError({ statusCode: 422, message: 'Fichier .odt invalide (content.xml introuvable)' })
   }
   const xml = await contentFile.async('string')
 
