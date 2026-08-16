@@ -49,6 +49,8 @@ export interface CvContent {
   metrics: CvMetric[]
   education: CvEducation[]
   languages: CvLanguage[]
+  /** Id d'un thème de app/utils/cv-themes.ts. Absent = thème par défaut (CV créés avant l'ajout des thèmes). */
+  theme?: string
 }
 
 /** 'design' = template soigné (par défaut), 'ats' = mise en page plate optimisée pour le parsing ATS */

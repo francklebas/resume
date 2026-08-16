@@ -1,11 +1,23 @@
 <script setup lang="ts">
 import type { CvContent } from '~/types/cv'
+import { getCvTheme } from '~/utils/cv-themes'
 
-defineProps<{ content: CvContent }>()
+const props = defineProps<{ content: CvContent }>()
+
+const theme = computed(() => getCvTheme(props.content.theme))
+
+const themeStyle = computed(() => ({
+  '--accent': theme.value.vars.accent,
+  '--ink': theme.value.vars.ink,
+  '--muted': theme.value.vars.muted,
+  '--rule': theme.value.vars.rule,
+  '--font-body': theme.value.vars.fontBody,
+  '--font-heading': theme.value.vars.fontHeading,
+}))
 </script>
 
 <template>
-  <div class="cv">
+  <div class="cv" :data-theme="theme.id" :style="themeStyle">
     <!-- Header -->
     <header class="cv-header">
       <div class="cv-header-main">
@@ -87,20 +99,43 @@ defineProps<{ content: CvContent }>()
 
 <style scoped>
 .cv {
-  --accent: #2f5fc4;
-  --ink: #222;
-  --muted: #6b6b6b;
-  --rule: #d8d8d8;
-
   box-sizing: border-box;
   width: 210mm;
   min-height: 297mm;
   padding: 15mm 18mm;
   background: white;
   color: var(--ink);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
   font-size: 10pt;
   line-height: 1.45;
+}
+
+.cv-name,
+.cv-section-title {
+  font-family: var(--font-heading);
+}
+
+/* Signal : accent en filet vertical plutôt qu'en règle horizontale, titres non capitalisés */
+.cv[data-theme='signal'] .cv-section {
+  border-top: none;
+  border-left: 1.2pt solid var(--accent);
+  padding-left: 5mm;
+}
+
+.cv[data-theme='signal'] .cv-section-title {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Graphite : titres en petites capitales sobres, pas de emphase couleur sur le nom */
+.cv[data-theme='graphite'] .cv-section-title {
+  text-transform: none;
+  font-style: italic;
+  letter-spacing: 0;
+}
+
+.cv[data-theme='graphite'] .cv-name {
+  font-weight: 400;
 }
 
 .cv :deep(strong) {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { CvContent, CvSnapshot, CvTemplate } from '~/types/cv'
+import { cvThemes, defaultCvThemeId } from '~/utils/cv-themes'
 
 const route = useRoute()
 const slug = route.params.slug as string
@@ -202,6 +203,28 @@ const saveLabel = computed(() => ({
       <div class="space-y-4 print:hidden">
         <EditorSection title="Importer un CV existant (PDF ou Word)" :default-open="false">
           <EditorImportDropzone @imported="onImported" />
+        </EditorSection>
+
+        <EditorSection title="Apparence" :default-open="false">
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <button
+              v-for="theme in cvThemes"
+              :key="theme.id"
+              type="button"
+              class="rounded-lg border p-3 text-left text-sm transition"
+              :class="draft.content.theme === theme.id || (!draft.content.theme && theme.id === defaultCvThemeId)
+                ? 'border-blue-500 ring-1 ring-blue-500'
+                : 'border-slate-200 hover:border-slate-300'"
+              @click="draft.content.theme = theme.id"
+            >
+              <span
+                class="mb-2 block h-2 w-8 rounded-full"
+                :style="{ backgroundColor: theme.vars.accent }"
+              />
+              <span class="block font-medium text-slate-800">{{ theme.label }}</span>
+              <span class="mt-1 block text-xs text-slate-500">{{ theme.description }}</span>
+            </button>
+          </div>
         </EditorSection>
 
         <EditorStepper :steps="editorSteps" :current="currentStep" @update:current="currentStep = $event" />
