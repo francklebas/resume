@@ -28,11 +28,18 @@ function parseMistralJson(response: ChatCompletionResponse): unknown {
   if (choice?.finishReason && TRUNCATED_FINISH_REASONS.has(choice.finishReason)) {
     throw createError({ statusCode: 502, message: 'Réponse Mistral tronquée (contenu trop long) — réessaie' })
   }
+  const cleaned = stripJsonFences(raw)
   try {
-    return JSON.parse(stripJsonFences(raw))
+    return JSON.parse(cleaned)
   }
-  catch {
-    console.error('[mistral] JSON invalide, finishReason=%s, contenu (500 premiers caractères) : %s', choice?.finishReason, raw.slice(0, 500))
+  catch (err) {
+    console.error(
+      '[mistral] JSON invalide, finishReason=%s, erreur=%s, longueur=%d\n--- contenu complet ---\n%s\n--- fin ---',
+      choice?.finishReason,
+      err instanceof Error ? err.message : String(err),
+      cleaned.length,
+      cleaned,
+    )
     throw createError({ statusCode: 502, message: 'Réponse Mistral : JSON invalide' })
   }
 }
