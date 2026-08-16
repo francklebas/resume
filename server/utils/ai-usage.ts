@@ -1,4 +1,4 @@
-import { serverSupabaseClient, serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
+import { serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
 import type { H3Event } from 'h3'
 
 // Quotas de la démo publique — protègent les ressources payantes (Mistral + Cloudflare Browser Rendering).
@@ -28,62 +28,44 @@ export async function enforceAiUsageLimit(event: H3Event, endpoint: UsageEndpoin
     if (profile?.is_admin) return
   }
 
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
   const ip = getHeader(event, 'cf-connecting-ip') ?? null
+  const isPdf = endpoint === 'pdf'
+  const kinds: UsageEndpoint[] = isPdf ? ['pdf'] : ['tailor', 'import', 'update']
+  const perUserLimit = isPdf ? PER_USER_PDF_LIMIT : PER_USER_AI_LIMIT
+  const perIpLimit = isPdf ? PER_IP_PDF_LIMIT : PER_IP_AI_LIMIT
 
-  // 1. Garde-fou global — client service-role (contourne la RLS, voit toutes les lignes de tous les users).
-  const { count: globalCount, error: globalError } = await admin
-    .from('ai_usage')
-    .select('id', { count: 'exact', head: true })
-    .gte('created_at', since)
-  if (globalError) throw createError({ statusCode: 500, message: globalError.message })
-  if ((globalCount ?? 0) >= GLOBAL_DAILY_LIMIT) {
+  // Check des 3 niveaux (global, IP, utilisateur) + insertion dans une seule transaction Postgres
+  // sous verrou (public.consume_ai_usage, migration ai_usage_atomic) : un SELECT count() suivi d'un
+  // INSERT séparé côté client laisse une fenêtre où des requêtes concurrentes lisent le même
+  // compteur avant qu'aucune n'ait inséré, et dépassent la limite (confirmé en le reproduisant).
+  const { data: verdict, error } = await admin.rpc('consume_ai_usage', {
+    p_user_id: user!.sub,
+    p_ip: ip,
+    p_endpoint: endpoint,
+    p_kinds: kinds,
+    p_user_limit: perUserLimit,
+    p_ip_limit: perIpLimit,
+    p_global_limit: GLOBAL_DAILY_LIMIT,
+  })
+  if (error) throw createError({ statusCode: 500, message: error.message })
+
+  if (verdict === 'global') {
     throw createError({
       statusCode: 429,
       message: `Limite quotidienne globale de la démo atteinte (${GLOBAL_DAILY_LIMIT} actions/24h). Réessaie demain.`,
     })
   }
-
-  const isPdf = endpoint === 'pdf'
-  const kinds: UsageEndpoint[] = isPdf ? ['pdf'] : ['tailor', 'import', 'update']
-
-  // 2. Quota par IP — client service-role (une identité anonyme est gratuite à recréer, l'IP moins).
-  if (ip) {
-    const perIpLimit = isPdf ? PER_IP_PDF_LIMIT : PER_IP_AI_LIMIT
-    const { count: ipCount, error: ipError } = await admin
-      .from('ai_usage')
-      .select('id', { count: 'exact', head: true })
-      .eq('ip', ip)
-      .in('endpoint', kinds)
-      .gte('created_at', since)
-    if (ipError) throw createError({ statusCode: 500, message: ipError.message })
-    if ((ipCount ?? 0) >= perIpLimit) {
-      throw createError({
-        statusCode: 429,
-        message: 'Limite atteinte pour ce réseau (démo publique). Réessaie plus tard.',
-      })
-    }
+  if (verdict === 'ip') {
+    throw createError({
+      statusCode: 429,
+      message: 'Limite atteinte pour ce réseau (démo publique). Réessaie plus tard.',
+    })
   }
-
-  // 3. Quota par utilisateur — client RLS (ne compte que les lignes du user courant).
-  const client = await serverSupabaseClient(event)
-  const perUserLimit = isPdf ? PER_USER_PDF_LIMIT : PER_USER_AI_LIMIT
-
-  const { count: userCount, error: userError } = await client
-    .from('ai_usage')
-    .select('id', { count: 'exact', head: true })
-    .in('endpoint', kinds)
-    .gte('created_at', since)
-  if (userError) throw createError({ statusCode: 500, message: userError.message })
-  if ((userCount ?? 0) >= perUserLimit) {
+  if (verdict === 'user') {
     const what = isPdf ? `${PER_USER_PDF_LIMIT} exports PDF` : `${PER_USER_AI_LIMIT} générations IA`
     throw createError({
       statusCode: 429,
       message: `Limite de ${what} par 24h atteinte. Réessaie plus tard.`,
     })
   }
-
-  // 4. Enregistre la consommation (RLS : insère pour le user courant, user_id = auth.uid() par défaut).
-  const { error: insertError } = await client.from('ai_usage').insert({ endpoint, ip } as never)
-  if (insertError) throw createError({ statusCode: 500, message: insertError.message })
 }

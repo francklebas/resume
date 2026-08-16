@@ -138,7 +138,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      consume_ai_usage: {
+        Args: {
+          p_user_id: string
+          p_ip: string | null
+          p_endpoint: string
+          p_kinds: string[]
+          p_user_limit: number
+          p_ip_limit: number
+          p_global_limit: number
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
