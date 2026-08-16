@@ -66,6 +66,7 @@ async function submit() {
         rows="4"
         placeholder="Décris ce qu'il faut ajouter ou changer (ex. « J'ai obtenu la certification AWS Solutions Architect en juillet 2026 »)"
         class="update-textarea"
+        autocorrect="off"
         :disabled="generating"
       />
 

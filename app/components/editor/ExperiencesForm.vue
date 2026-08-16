@@ -58,6 +58,7 @@ const inputClass = 'w-full rounded-lg border border-slate-300 px-3 py-1.5 text-s
           rows="4"
           placeholder="Une réalisation par ligne — **gras** supporté"
           :class="inputClass"
+          autocorrect="off"
           @change="setBullets(exp, ($event.target as HTMLTextAreaElement).value)"
         />
         <input v-model="exp.stack" type="text" placeholder="Stack (optionnelle) : Vue 3 · TypeScript · …" :class="inputClass">

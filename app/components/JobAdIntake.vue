@@ -168,6 +168,7 @@ async function submit() {
         ? 'Colle le texte de l\'offre, ou une capture d\'écran (⌘V) — le CV joint sera adapté.'
         : 'Colle le texte de l\'offre, ou une capture d\'écran (⌘V) — le CV de base sera adapté automatiquement. Tu peux aussi déposer un CV (PDF, Word) pour l\'adapter à la place.'"
       class="intake-textarea"
+      autocorrect="off"
       :disabled="generating"
       @paste="onPaste"
     />
