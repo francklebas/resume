@@ -5,8 +5,6 @@ Builder de CV personnel : un CV de base + des variantes nommées par cible (ex. 
 - **Stack** : Nuxt 4 · TypeScript · TailwindCSS v4 · Supabase (`@nuxtjs/supabase`)
 - **Déploiement** : Cloudflare Workers (`wrangler`)
 
-> La génération de PDF (Puppeteer + Cloudflare R2) est développée séparément sur la branche `feature/pdf-r2`, en attendant que le bucket R2 et les clés associées soient prêts.
-
 ## Infra
 
 | Ressource | Valeur |
@@ -29,10 +27,11 @@ Premier lancement : créer son compte via « S'inscrire » sur `/login` (confirm
 
 - `/` — liste des CV : éditer, dupliquer en variante, supprimer
 - `/editor/[slug]` — formulaire par section + préview A4 live (composant `CvDocument`), autosave
+- `/cvs/[slug]/download` — export PDF à la volée via Cloudflare Browser Rendering (`server/utils/browser.ts`), soumis au quota d'usage
 
 Le contenu du CV de base (`app/utils/base-cv-content.ts`) reproduit `franck-lebas-vuejs-2026.pdf`. Les bullets acceptent `**gras**`.
 
-Les colonnes `pdf_key` / `pdf_generated_at` existent déjà dans la table `cvs` mais ne sont pas utilisées tant que la génération de PDF n'est pas fusionnée depuis `feature/pdf-r2`.
+Le PDF est régénéré à chaque téléchargement (pas de stockage). Les colonnes `pdf_key` / `pdf_generated_at` existent dans la table `cvs` pour un futur cache R2 du dernier PDF généré, mais ne sont pas encore utilisées — optimisation de coût, pas un blocage fonctionnel.
 
 ## Déploiement (Cloudflare Workers)
 
