@@ -6,13 +6,13 @@ definePageMeta({ layout: 'legal' })
   <div class="prose prose-slate max-w-none">
     <h1>Politique de confidentialité</h1>
     <p class="text-sm text-slate-500">
-      Dernière mise à jour : <!-- 🔶 À COMPLÉTER --> [date].
+      Dernière mise à jour : 14 août 2026.
     </p>
 
     <h2>1. Qui traite vos données</h2>
     <p>
-      Ce service est édité par <strong>🔶 [ton nom ou ta raison sociale, ex. « Franck Lebas, entrepreneur individuel »]</strong>,
-      contact : <a href="mailto:🔶-ton-email@exemple.com">🔶 [adresse e-mail de contact]</a>.
+      Ce service est édité par <strong>Franck Lebas, auto-entrepreneur (SIREN 510919970)</strong>,
+      contact : <a href="mailto:hello@francklebas.com">hello@francklebas.com</a>.
     </p>
 
     <h2>2. Données collectées</h2>
@@ -50,7 +50,7 @@ definePageMeta({ layout: 'legal' })
       Conformément au RGPD, tu disposes d'un droit d'accès, de rectification, d'effacement,
       de portabilité et d'opposition sur tes données. Tu peux exercer ces droits directement
       dans l'application (export, suppression) ou en écrivant à
-      <a href="mailto:🔶-ton-email@exemple.com">🔶 [adresse e-mail de contact]</a>.
+      <a href="mailto:hello@francklebas.com">hello@francklebas.com</a>.
     </p>
 
     <h2>7. Sécurité</h2>

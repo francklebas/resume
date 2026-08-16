@@ -30,5 +30,9 @@ export default defineNuxtConfig({
     mistralApiKey: '',
     // NUXT_PRINT_TOKEN_SECRET
     printTokenSecret: '',
+    public: {
+      // NUXT_PUBLIC_TURNSTILE_SITEKEY
+      turnstileSitekey: '',
+    },
   },
 })

@@ -1,6 +1,20 @@
 <script setup lang="ts">
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (container: string | HTMLElement, options: {
+        sitekey: string
+        action?: string
+        callback: (token: string) => void
+      }) => string
+      reset: (widgetId: string) => void
+    }
+  }
+}
+
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
+const { public: publicConfig } = useRuntimeConfig()
 
 const email = ref('')
 const password = ref('')
@@ -15,13 +29,39 @@ watchEffect(() => {
   if (user.value) navigateTo('/')
 })
 
+// Widget Turnstile invisible/managed pour protéger la démo anonyme (Supabase valide le token
+// côté serveur via son propre siteverify, configuré dans le dashboard Auth).
+const turnstileToken = ref('')
+let turnstileWidgetId: string | null = null
+
+function renderTurnstile() {
+  if (!window.turnstile || !publicConfig.turnstileSitekey) return
+  turnstileWidgetId = window.turnstile.render('#turnstile-widget', {
+    sitekey: publicConfig.turnstileSitekey as string,
+    action: 'anonymous_signin',
+    callback: (token: string) => { turnstileToken.value = token },
+  })
+}
+
+onMounted(() => {
+  if (!publicConfig.turnstileSitekey) return
+  const script = document.createElement('script')
+  script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js'
+  script.async = true
+  script.defer = true
+  script.onload = renderTurnstile
+  document.head.appendChild(script)
+})
+
 // Accès démo sans friction : session anonyme (rôle `authenticated`, isolée par auth.uid()).
 // Le quota par-user et la RLS s'appliquent tels quels.
 async function startDemo() {
   demoPending.value = true
   error.value = null
   try {
-    const { error: err } = await supabase.auth.signInAnonymously()
+    const { error: err } = await supabase.auth.signInAnonymously({
+      options: turnstileToken.value ? { captchaToken: turnstileToken.value } : undefined,
+    })
     if (err) throw err
     // succès → watchEffect redirige vers /
   }
@@ -30,6 +70,8 @@ async function startDemo() {
   }
   finally {
     demoPending.value = false
+    turnstileToken.value = ''
+    if (turnstileWidgetId) window.turnstile?.reset(turnstileWidgetId)
   }
 }
 
@@ -80,6 +122,7 @@ async function submit() {
     >
       {{ demoPending ? 'Ouverture de la démo…' : 'Tester la démo sans compte' }}
     </button>
+    <div id="turnstile-widget" class="mt-3 flex justify-center" />
     <button
       type="button"
       class="mt-3 block w-full text-center text-xs text-slate-500 hover:text-slate-900"

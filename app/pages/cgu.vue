@@ -6,13 +6,13 @@ definePageMeta({ layout: 'legal' })
   <div class="prose prose-slate max-w-none">
     <h1>Conditions générales d'utilisation</h1>
     <p class="text-sm text-slate-500">
-      Dernière mise à jour : <!-- 🔶 À COMPLÉTER --> [date].
+      Dernière mise à jour : 14 août 2026.
     </p>
 
     <h2>1. Objet</h2>
     <p>
       Les présentes conditions régissent l'utilisation du service ResumeAI, édité par
-      <strong>🔶 [ton nom ou ta raison sociale]</strong>. L'utilisation du service implique
+      <strong>Franck Lebas, auto-entrepreneur (SIREN 510919970)</strong>. L'utilisation du service implique
       l'acceptation pleine et entière de ces conditions.
     </p>
 
@@ -71,7 +71,7 @@ definePageMeta({ layout: 'legal' })
 
     <h2>10. Contact</h2>
     <p>
-      <a href="mailto:🔶-ton-email@exemple.com">🔶 [adresse e-mail de contact]</a>
+      <a href="mailto:hello@francklebas.com">hello@francklebas.com</a>
     </p>
 
     <p class="text-sm text-slate-400">

@@ -1,9 +1,10 @@
-import mammoth from 'mammoth'
+// L'entrée par défaut de mammoth ("mammoth") résout vers lib/index.js, qui dépend de fs +
+// bluebird (require("./unzip")) — inutilisable sur Cloudflare Workers ("promisify is not a
+// function" en prod). On importe directement le bundle mammoth.browser.js, autonome (pas de
+// dépendance à fs), pour que ça marche pareil en dev et en build Cloudflare.
+import mammoth from 'mammoth/mammoth.browser.js'
 
-// mammoth résout vers des implémentations d'unzip différentes selon le bundler :
-// { buffer } en Node (lib/unzip.js), { arrayBuffer } dans le build navigateur/edge (browser/unzip.js).
-// On fournit les deux pour que ça fonctionne aussi bien en dev qu'en build Cloudflare.
 export async function extractDocxText(arrayBuffer: ArrayBuffer): Promise<string> {
-  const result = await mammoth.extractRawText({ arrayBuffer, buffer: Buffer.from(arrayBuffer) } as never)
+  const result = await mammoth.extractRawText({ arrayBuffer })
   return result.value
 }

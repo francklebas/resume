@@ -20,6 +20,7 @@
   },
   "vars": {
     "SUPABASE_URL": "https://ogtrvjzqfgbooidskbav.supabase.co",
-    "SUPABASE_KEY": "sb_publishable_1l5v1RuhQsXPVKBiq5zP9g_spFSFgmT"
+    "SUPABASE_KEY": "sb_publishable_1l5v1RuhQsXPVKBiq5zP9g_spFSFgmT",
+    "NUXT_PUBLIC_TURNSTILE_SITEKEY": "0x4AAAAAAEPyX-aZpQmE2QHj"
   }
 }
