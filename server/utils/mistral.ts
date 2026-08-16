@@ -7,21 +7,32 @@ const MODEL = 'mistral-medium-latest'
 // milliers de tokens ; sans plafond explicite, une réponse tronquée produit un JSON invalide.
 const MAX_TOKENS = 8000
 
-// Un JSON invalide vient presque toujours d'une réponse tronquée (finishReason "length") plutôt
-// que d'un vrai problème de format — message dédié pour orienter vers un nouvel essai.
+// Un JSON invalide vient presque toujours d'une réponse tronquée (finishReason "length" — plafond
+// maxTokens de la requête — ou "model_length" — plafond de sortie propre au modèle, indépendant de
+// maxTokens) plutôt que d'un vrai problème de format — message dédié pour orienter vers un nouvel essai.
+const TRUNCATED_FINISH_REASONS = new Set(['length', 'model_length'])
+
+// Malgré responseFormat "json_object", le modèle enveloppe parfois la réponse dans des fences
+// markdown (```json ... ```) — on les retire avant de tenter le parse plutôt que d'échouer direct.
+function stripJsonFences(raw: string): string {
+  const match = raw.trim().match(/^```(?:json)?\s*([\s\S]*?)\s*```$/)
+  return match ? match[1]! : raw
+}
+
 function parseMistralJson(response: ChatCompletionResponse): unknown {
   const choice = response.choices?.[0]
   const raw = choice?.message?.content
   if (typeof raw !== 'string') {
     throw createError({ statusCode: 502, message: 'Réponse Mistral vide ou invalide' })
   }
-  if (choice?.finishReason === 'length') {
+  if (choice?.finishReason && TRUNCATED_FINISH_REASONS.has(choice.finishReason)) {
     throw createError({ statusCode: 502, message: 'Réponse Mistral tronquée (contenu trop long) — réessaie' })
   }
   try {
-    return JSON.parse(raw)
+    return JSON.parse(stripJsonFences(raw))
   }
   catch {
+    console.error('[mistral] JSON invalide, finishReason=%s, contenu (500 premiers caractères) : %s', choice?.finishReason, raw.slice(0, 500))
     throw createError({ statusCode: 502, message: 'Réponse Mistral : JSON invalide' })
   }
 }
