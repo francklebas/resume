@@ -43,6 +43,18 @@ function renderTurnstile() {
   })
 }
 
+function waitForToken() {
+  return new Promise<void>((resolve) => {
+    if (turnstileToken.value) return resolve()
+    const stop = watch(turnstileToken, (val) => {
+      if (val) {
+        stop()
+        resolve()
+      }
+    })
+  })
+}
+
 onMounted(() => {
   if (!publicConfig.turnstileSitekey) return
   const script = document.createElement('script')
@@ -59,11 +71,11 @@ async function startDemo() {
   demoPending.value = true
   error.value = null
   try {
+    await waitForToken()
     const { error: err } = await supabase.auth.signInAnonymously({
-      options: turnstileToken.value ? { captchaToken: turnstileToken.value } : undefined,
+      options: { captchaToken: turnstileToken.value },
     })
     if (err) throw err
-    // succès → watchEffect redirige vers /
   }
   catch (e: unknown) {
     error.value = errorMessage(e)
@@ -80,10 +92,12 @@ async function submit() {
   error.value = null
   info.value = null
   try {
+    await waitForToken()
     if (mode.value === 'login') {
       const { error: err } = await supabase.auth.signInWithPassword({
         email: email.value,
         password: password.value,
+        options: { captchaToken: turnstileToken.value },
       })
       if (err) throw err
       await navigateTo('/')
@@ -92,6 +106,7 @@ async function submit() {
       const { data, error: err } = await supabase.auth.signUp({
         email: email.value,
         password: password.value,
+        options: { captchaToken: turnstileToken.value },
       })
       if (err) throw err
       if (data.session) await navigateTo('/')
@@ -103,6 +118,8 @@ async function submit() {
   }
   finally {
     pending.value = false
+    turnstileToken.value = ''
+    if (turnstileWidgetId) window.turnstile?.reset(turnstileWidgetId)
   }
 }
 </script>
